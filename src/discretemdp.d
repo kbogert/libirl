@@ -3,6 +3,7 @@ import mdp;
 
 class DiscreteSpace : Space {
 
+     public int size();
 }
 
 
