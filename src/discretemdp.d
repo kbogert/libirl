@@ -1,12 +1,29 @@
 import mdp;
 
 
+class State {
+
+}
+
+class Action {
+
+
+}
+
+class StateAction {
+
+}
+
+class StateActionState {
+
+}
+
+
+
 class DiscreteSpace : Space {
 
      public int size();
 }
-
-
 
 
 class DiscreteStateSpace : DiscreteSpace {
@@ -42,3 +59,12 @@ class DiscreteModel : Model {
 }
 
 
+class Reward {
+
+
+}
+
+
+class LinearReward : Reward {
+
+}

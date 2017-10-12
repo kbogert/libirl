@@ -1,25 +1,7 @@
 
 
 
-class State {
-
-}
-
-class Action {
-
-
-}
-
 class Space {
-
-}
-
-
-class StateAction {
-
-}
-
-class StateActionState {
 
 }
 
@@ -34,16 +16,8 @@ class Mapping {
 
 }
 
-class Reward {
-
-
-}
-
 class Model {
 
 }
 
 
-class LinearReward : Reward {
-
-}
