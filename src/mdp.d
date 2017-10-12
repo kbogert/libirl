@@ -42,3 +42,8 @@ class Reward {
 class Model {
 
 }
+
+
+class LinearReward : Reward {
+
+}
