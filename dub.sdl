@@ -1,0 +1,4 @@
+name "libirl"
+description "Inverse Reinforcement Learning Library"
+copyright "Copyright © 2017, Kenneth Bogert"
+authors "Kenneth Bogert"
