@@ -20,41 +20,41 @@ class StateActionState {
 
 
 
-class DiscreteSpace : Space {
+class Space : mdp.Space {
 
-     public int size();
+     public ulong size();
 }
 
 
-class DiscreteStateSpace : DiscreteSpace {
-
-}
-
-
-class DiscreteActionSpace : DiscreteSpace {
-
-
-}
-
-class DiscreteStateActionSpace : DiscreteSpace {
-
-}
-
-class DiscreteStateActionStateSpace : DiscreteSpace {
+class StateSpace : Space {
 
 }
 
 
-class DiscreteDistribution : Distribution {
-
-}
-
-class DiscreteMapping : Mapping {
+class ActionSpace : Space {
 
 
 }
 
-class DiscreteModel : Model {
+class StateActionSpace : Space {
+
+}
+
+class StateActionStateSpace : Space {
+
+}
+
+
+class Distribution : mdp.Distribution {
+
+}
+
+class Mapping : mdp.Mapping {
+
+
+}
+
+class Model : mdp.Model {
 
 }
 

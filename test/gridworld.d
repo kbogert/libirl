@@ -1,7 +1,12 @@
+module gridworld;
+
+unittest {
+
+
 import discretemdp;
 
 
-class GridWorldState : discretemdp.DiscreteState {
+class GridWorldState : discretemdp.State {
      private int x;
      private int y;
 
@@ -19,20 +24,24 @@ class GridWorldState : discretemdp.DiscreteState {
      }
 
      public override string toString() {
+          return "";
      }
 
      override hash_t toHash() const {
+          return 0;
      }
 
      override bool opEquals(Object o) {
+          return false;
      }
 
      override int opCmp(Object o) const {
+          return 0;
      }
 
 }
 
-class GridWorldActionUp : discretemdp.DiscreteAction {
+class GridWorldActionUp : discretemdp.Action {
 
      public GridWorldState intendedNextState(GridWorldState s) {
            return new GridWorldState(s.getX(), s.getY() - 1);
@@ -40,7 +49,7 @@ class GridWorldActionUp : discretemdp.DiscreteAction {
      }
 }
 
-class GridWorldActionDown : discretemdp.DiscreteAction {
+class GridWorldActionDown : discretemdp.Action {
 
      public GridWorldState intendedNextState(GridWorldState s) {
            return new GridWorldState(s.getX(), s.getY() + 1);
@@ -49,7 +58,7 @@ class GridWorldActionDown : discretemdp.DiscreteAction {
 
 }
 
-class GridWorldActionLeft : discretemdp.DiscreteAction {
+class GridWorldActionLeft : discretemdp.Action {
 
      public GridWorldState intendedNextState(GridWorldState s) {
            return new GridWorldState(s.getX() - 1, s.getY());
@@ -58,7 +67,7 @@ class GridWorldActionLeft : discretemdp.DiscreteAction {
 
 }
 
-class GridWorldActionRight : discretemdp.DiscreteAction {
+class GridWorldActionRight : discretemdp.Action {
 
      public GridWorldState intendedNextState(GridWorldState s) {
            return new GridWorldState(s.getX() + 1, s.getY());
@@ -69,27 +78,27 @@ class GridWorldActionRight : discretemdp.DiscreteAction {
 
 
 
-class GridWorldStateSpace : discretemdp.DiscreteStateSpace {
+class GridWorldStateSpace : discretemdp.StateSpace {
 
      private GridWorldState [] states;
 
 
-     public State [] getStates() {
+     public GridWorldState [] getStates() {
           return states;
      }
 
-     public int size() {
+     public ulong size() {
           return states.length;
      }
 }
 
 
-class GridWorldActionSpace : discretemdp.DiscreteActionSpace {
+class GridWorldActionSpace : discretemdp.ActionSpace {
 
 }
 
 
-class GridWorldModel : discretemdp.DiscreteModel {
+class GridWorldModel : discretemdp.Model {
 
 
      public this(int xSpace, int ySpace, double transitionProb) {
@@ -107,4 +116,6 @@ class GridWorldReward : discretemdp.LinearReward {
 
 }
 
+
+}
 
