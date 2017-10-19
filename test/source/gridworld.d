@@ -2,7 +2,7 @@ module gridworld;
 
 
 import discretemdp;
-
+import std.conv;
 
 class GridWorldState : discretemdp.State {
      private int x;
@@ -22,15 +22,14 @@ class GridWorldState : discretemdp.State {
      }
 
      public override string toString() {
-          return "";
-     }
-
-     override hash_t toHash() const {
-          return 0;
+          return "State: " ~ to!string(x) ~ " x " ~ to!string(y);
      }
 
      override bool opEquals(Object o) {
-          return false;
+          auto rhs = cast(GridWorldState)o;
+          if (!rhs) return false;
+
+          return x == rhs.x && y == rhs.y;
      }
 
      override int opCmp(Object o) const {
