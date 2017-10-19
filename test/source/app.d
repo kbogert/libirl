@@ -18,6 +18,7 @@ shared static this()
 		import gridworld;
 		import core.runtime;
 		Runtime.moduleUnitTester = () => true;
-		assert(runUnitTests!gridworld(new JsonTestResultWriter("results.json")), "Unit tests failed.");
+//		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
+		assert(runUnitTests!(gridworld)(new ConsoleTestResultWriter), "Unit tests failed.");
 	}
 }

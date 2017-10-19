@@ -1,7 +1,5 @@
 module gridworld;
 
-unittest {
-
 
 import discretemdp;
 
@@ -120,7 +118,14 @@ class GridWorldReward : discretemdp.LinearReward {
 }
 
 
+import tested;
 
-
+@name("arithmetic")
+unittest {
+        int i = 3;
+        assert(i == 3);
+        i *= 2;
+        assert(i == 6);
+        i += 5;
+        assert(i == 11);
 }
-
