@@ -87,7 +87,7 @@ class GridWorldStateSpace : discretemdp.StateSpace {
           return states;
      }
 
-     public ulong size() {
+     override public ulong size() {
           return states.length;
      }
 }
@@ -95,6 +95,9 @@ class GridWorldStateSpace : discretemdp.StateSpace {
 
 class GridWorldActionSpace : discretemdp.ActionSpace {
 
+     override public ulong size() {
+          return 0;
+     }
 }
 
 
@@ -115,6 +118,8 @@ class GridWorldReward : discretemdp.LinearReward {
 
 
 }
+
+
 
 
 }

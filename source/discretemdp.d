@@ -1,3 +1,5 @@
+module discretemdp;
+
 import mdp;
 
 
@@ -22,7 +24,7 @@ class StateActionState {
 
 class Space : mdp.Space {
 
-     public ulong size();
+     abstract public ulong size();
 }
 
 
