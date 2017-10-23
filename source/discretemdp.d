@@ -50,7 +50,7 @@ class StateActionStateSpace : Space {
 class Distribution(T) : mdp.Distribution {
 
      double [T] myDistribution;
-     boolean normalized;
+     bool normalized;
      Space mySpace;
 
 
@@ -71,7 +71,7 @@ class Distribution(T) : mdp.Distribution {
           normalized = true;
      }
 
-     public boolean isNormalized() {
+     public bool isNormalized() {
           return normalized;
      }
 
