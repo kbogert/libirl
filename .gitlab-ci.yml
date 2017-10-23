@@ -1,5 +1,6 @@
 job1:
   script:
     - dub --build=unittest
+  stage: build
   only:
     - master
