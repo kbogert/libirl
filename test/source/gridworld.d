@@ -32,10 +32,9 @@ class GridWorldState : discretemdp.State {
           return x == rhs.x && y == rhs.y;
      }
 
-     override int opCmp(Object o) const {
-          return 0;
+     override size_t toHash() @trusted nothrow {
+          return x * y;
      }
-
 }
 
 class GridWorldActionUp : discretemdp.Action {

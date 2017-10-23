@@ -1,7 +1,16 @@
-job1:
+library:
   script:
-    - dub --build=unittest
+    - dub build
   stage: build
+  only:
+    - master
+  tags:
+    - D
+
+test:
+  script:
+    - dub build --build=unittest --root=test
+  stage: test
   only:
     - master
   tags:

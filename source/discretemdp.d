@@ -50,6 +50,9 @@ class StateActionStateSpace : Space {
 class Distribution(T) : mdp.Distribution {
 
      double [T] myDistribution;
+     boolean normalized;
+     Space mySpace;
+
 
      public this(double [T] distribution) {
           myDistribution = distribution;
@@ -58,27 +61,51 @@ class Distribution(T) : mdp.Distribution {
      }
 
      public this(Space s) {
-
+          mySpace = s;
      }
 
 
-     private void normalize() {
+     public void normalize() {
+
+
+          normalized = true;
+     }
+
+     public boolean isNormalized() {
+          return normalized;
+     }
+
+     public T sample() {
 
      }
 
+     public T argmax() {
+
+     }
+
+     public T argmin() {
+
+     } 
 
      override public string toString() {
 
 
      }
 
-     override double opIndex(T ... i) {
-
+     override double opIndex(T i) {
+          return myDistribution[i];
      }
 
-     override void opIndexAssign(double, T ... i) {
-
+     override void opIndexAssign(double value, T i) {
+          myDistribution[i] = value;
+          normalized = false;
      }
+
+     override int opDollar(size_t pos)() {
+          return myDistribution.length;
+     }
+
+     
      
 }
 
