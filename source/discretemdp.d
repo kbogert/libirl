@@ -26,7 +26,7 @@ class Space(T) : mdp.Space {
 
      abstract public size_t size();
      abstract public bool contains(T i);
-     abstract int opApply(int delegate(ref T dg) );
+     abstract int opApply(int delegate(ref T) dg);
 }
 
 
@@ -207,6 +207,16 @@ class Distribution(T) : mdp.Distribution {
 
      auto byKeyValue() {
           return myDistribution.byKeyValue();
+     }
+
+     int opApply(int delegate(ref T, ref double) dg) {
+          int result = 0;
+          foreach (key, value ; myDistribution) {
+               result = dg(key, value);
+               if (result) break;
+
+          }
+          return result;
      }
 }
 
