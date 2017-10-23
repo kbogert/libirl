@@ -92,11 +92,11 @@ class Distribution(T) : mdp.Distribution {
 
      }
 
-     override double opIndex(T i) {
+     double opIndex(T i) {
           return myDistribution[i];
      }
 
-     override void opIndexAssign(double value, T i) {
+     void opIndexAssign(double value, T i) {
           myDistribution[i] = value;
           normalized = false;
      }
