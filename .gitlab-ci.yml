@@ -1,7 +1,6 @@
 library:
   script:
     - dub build
-    - dub build --build=unittest --root=test
   stage: build
   only:
     - master
@@ -10,6 +9,7 @@ library:
 
 test:
   script:
+    - dub build --build=unittest --root=test
     - test/libirl-test
   stage: test
   only:
