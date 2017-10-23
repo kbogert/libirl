@@ -1,0 +1,5 @@
+job1:
+  script:
+    - dub --build=unittest
+  only:
+    - master
