@@ -24,9 +24,9 @@ class StateActionState {
 
 class Space(T) : mdp.Space {
 
-     abstract public ulong size();
+     abstract public size_t size();
      abstract public bool contains(T i);
-
+     abstract int opApply(int delegate(ref T dg) );
 }
 
 
@@ -62,14 +62,34 @@ class Distribution(T) : mdp.Distribution {
 
      }
 
-     public this(Space!T s) {
+     public this(Space!T s, bool init = false) {
           mySpace = s;
           normalized = false;
+          if (init) {
+                foreach(T key ; mySpace) {
+                     myDistribution[key] = 1.0;
+                }
+                myDistribution.rehash();
+                normalize();
+          }
      }
 
 
      public void normalize() {
+          if (normalized) return;
 
+          auto tot = 0.0;
+          foreach(val ; myDistribution.values) {
+               tot += val;
+          }
+
+          if (tot == 0.0) {
+               throw new Exception("Empty distribution or all zero probabilities, cannot normalize");
+          }
+
+          foreach( key ; myDistribution.keys) {
+               myDistribution[key] /= tot;
+          }
 
           normalized = true;
      }
@@ -78,22 +98,58 @@ class Distribution(T) : mdp.Distribution {
           return normalized;
      }
 
+     // will always return a sample
      public T sample() {
           normalize();
+
+          import std.random;
+
+          auto rand = uniform(0.0, 1.0);
+
+          auto keys = myDistribution.keys;
+          randomShuffle(keys);
+
+          auto mass = 0.0;
+          foreach (T k; keys) {
+               mass += myDistribution[k];
+
+               if (mass >= rand)
+                    return k;
+          }
+
+          debug {
+               import std.conv;
+               throw new Exception("Didn't find a key to sample, ended at: " ~ to!string(mass) ~ " but wanted " ~ to!string(rand));
+          } else {
+                return keys[$-1];
+          }
 
      }
 
      public T argmax() {
 
+          auto max = -double.max;
+          T returnval = null;
+
+          foreach(key, val ; myDistribution) {
+                if (val > max) {
+                     max = val;
+                     returnval = key;
+                }
+          }
+
+          return returnval;
+
      }
 
-     public T argmin() {
-
-     } 
-
      override public string toString() {
+          import std.conv;
+          string returnval = "";
 
-
+          foreach(key, val ; myDistribution) {
+                returnval ~= key.toString() ~ " => " ~ to!string(val) ~ "\n";
+          }
+          return returnval;
      }
 
      double opIndex(T i) {
@@ -109,14 +165,35 @@ class Distribution(T) : mdp.Distribution {
      }
 
      void opIndexAssign(double value, T i) {
+          if ( mySpace !is null && ! mySpace.contains(i)) {
+               throw new Exception("ERROR, key is not in the space this distribution is defined over.");
+          }
           myDistribution[i] = value;
           normalized = false;
      }
 
-     override int opDollar(size_t pos)() {
+     size_t opDollar(size_t pos)() {
+          return size();
+     }
+
+     size_t size() {
           return myDistribution.length;
      }
 
+     void opIndexOpAssign(string op)(double rhs, T key) {
+          double* p;
+          p = (key in myDistribution);
+          if (p is null) {
+               if ( mySpace !is null && ! mySpace.contains(key)) {
+                    throw new Exception("ERROR, key is not in the space this distribution is defined over.");
+               }
+               myDistribution[key] = 0;
+               p = (key in myDistribution);
+          }
+          mixin("*p " ~ op ~ " rhs");
+
+          normalized = false;
+     }
      
      // need the byKey(), byValue(), and byKeyValue() methods     
 
