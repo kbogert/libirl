@@ -112,6 +112,7 @@ class GridWorldModel : discretemdp.Model {
 
 class GridWorldReward : discretemdp.LinearReward {
 
+        discretemdp.Distribution!State uniform;
 
 }
 

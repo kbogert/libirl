@@ -106,7 +106,11 @@ class Distribution(T) : mdp.Distribution {
      }
 
      
-     
+     // need the byKey(), byValue(), and byKeyValue() methods     
+
+     auto byKey() {
+          return myDistribution.byKey();
+     }
 }
 
 // Holds a discrete mapping from one object type to a distribution over
