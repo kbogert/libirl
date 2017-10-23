@@ -22,27 +22,29 @@ class StateActionState {
 
 
 
-class Space : mdp.Space {
+class Space(T) : mdp.Space {
 
      abstract public ulong size();
-}
-
-
-class StateSpace : Space {
+     abstract public bool contains(T i);
 
 }
 
 
-class ActionSpace : Space {
+class StateSpace : Space!State {
+
+}
+
+
+class ActionSpace : Space!Action {
 
 
 }
 
-class StateActionSpace : Space {
+class StateActionSpace : Space!StateAction {
 
 }
 
-class StateActionStateSpace : Space {
+class StateActionStateSpace : Space!StateActionState {
 
 }
 
@@ -51,7 +53,7 @@ class Distribution(T) : mdp.Distribution {
 
      double [T] myDistribution;
      bool normalized;
-     Space mySpace;
+     Space!T mySpace;
 
 
      public this(double [T] distribution) {
@@ -60,8 +62,9 @@ class Distribution(T) : mdp.Distribution {
 
      }
 
-     public this(Space s) {
+     public this(Space!T s) {
           mySpace = s;
+          normalized = false;
      }
 
 
@@ -76,6 +79,7 @@ class Distribution(T) : mdp.Distribution {
      }
 
      public T sample() {
+          normalize();
 
      }
 
@@ -93,7 +97,15 @@ class Distribution(T) : mdp.Distribution {
      }
 
      double opIndex(T i) {
-          return myDistribution[i];
+          double* p;
+          p = (i in myDistribution);
+          if (p !is null) {
+               return *p;
+          }
+          if ( mySpace !is null && ! mySpace.contains(i)) {
+               throw new Exception("ERROR, key is not in the space this distribution is defined over.");
+          }
+          return 0;
      }
 
      void opIndexAssign(double value, T i) {
@@ -110,6 +122,14 @@ class Distribution(T) : mdp.Distribution {
 
      auto byKey() {
           return myDistribution.byKey();
+     }
+
+     auto byValue() {
+          return myDistribution.byValue();
+     }
+
+     auto byKeyValue() {
+          return myDistribution.byKeyValue();
      }
 }
 
