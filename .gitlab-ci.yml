@@ -4,3 +4,5 @@ job1:
   stage: build
   only:
     - master
+  tags:
+    - D
