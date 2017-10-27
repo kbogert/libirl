@@ -111,8 +111,8 @@ class Distribution(T) : mdp.Distribution {
                throw new Exception("Empty distribution or all zero probabilities, cannot normalize");
           }
 
-          foreach(key ; myDistribution.keys) {
-               myDistribution[key] = myDistribution[key] / tot;
+          foreach(key, ref val ; myDistribution) {
+               val /= tot;
           }
 
           normalized = true;
