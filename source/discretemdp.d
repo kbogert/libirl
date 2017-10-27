@@ -62,15 +62,36 @@ class Distribution(T) : mdp.Distribution {
 
      }
 
-     public this(Space!T s, bool init = false) {
+     public this(Space!T s, mdp.DistInitType init = mdp.DistInitType.None) {
           mySpace = s;
           normalized = false;
-          if (init) {
-                foreach(T key ; mySpace) {
-                     myDistribution[key] = 1.0;
-                }
-                myDistribution.rehash();
-                normalize();
+          final switch(init) {
+              case mdp.DistInitType.Uniform:
+                  foreach(T key ; mySpace) {
+                       myDistribution[key] = 1.0;
+                  }
+                  myDistribution.rehash();
+                  break;
+              case mdp.DistInitType.RandomFromUniform:
+                  import std.random;
+                  foreach(T key ; mySpace) {
+                       myDistribution[key] = uniform01();
+                  }
+                  myDistribution.rehash();
+                  break;
+              case mdp.DistInitType.RandomFromGaussian:
+                  import std.random;
+                  foreach(T key ; mySpace) {
+                       double total = 0;
+                       for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
+                            total += uniform(-1.0, 1.0);
+                       myDistribution[key] = total;
+                  }
+                  myDistribution.rehash();
+                  break;
+              case mdp.DistInitType.None:
+                  break;
+
           }
      }
 
