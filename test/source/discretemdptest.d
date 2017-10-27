@@ -14,7 +14,7 @@ class testObj {
         a = b;
     }
 
-     override bool opEquals(Object o) {
+    override bool opEquals(Object o) {
           auto rhs = cast(testObj)o;
           if (!rhs) return false;
 
@@ -39,18 +39,18 @@ class testObjSpace : Space!(testObj) {
              arr ~= new testObj(i);
      }
 
-     public size_t size() {
+     override public size_t size() {
          return arr.length;
      }
 
-     public bool contains(testObj i) {
+     override public bool contains(testObj i) {
          foreach( a ; arr) 
              if (a == i)
                  return true;
          return false;
      }
 
-     int opApply(int delegate(ref testObj) dg) {
+     override int opApply(int delegate(ref testObj) dg) {
           int result = 0;
           foreach (value ; arr) {
                result = dg(value);
