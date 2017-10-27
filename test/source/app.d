@@ -16,9 +16,11 @@ shared static this()
 	version (unittest) {
 		// disable built-in unit test runner
 		import gridworld;
+                import discretemdptest;
 		import core.runtime;
 		Runtime.moduleUnitTester = () => true;
 //		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
 		assert(runUnitTests!(gridworld)(new ConsoleTestResultWriter), "Unit tests failed.");
+		assert(runUnitTests!(discretemdptest)(new ConsoleTestResultWriter), "Unit tests failed.");
 	}
 }

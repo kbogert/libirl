@@ -65,34 +65,37 @@ class Distribution(T) : mdp.Distribution {
      public this(Space!T s, mdp.DistInitType init = mdp.DistInitType.None) {
           mySpace = s;
           normalized = false;
-          final switch(init) {
-              case mdp.DistInitType.Uniform:
-                  foreach(T key ; mySpace) {
-                       myDistribution[key] = 1.0;
-                  }
-                  myDistribution.rehash();
-                  break;
-              case mdp.DistInitType.RandomFromUniform:
-                  import std.random;
-                  foreach(T key ; mySpace) {
-                       myDistribution[key] = uniform01();
-                  }
-                  myDistribution.rehash();
-                  break;
-              case mdp.DistInitType.RandomFromGaussian:
-                  import std.random;
-                  foreach(T key ; mySpace) {
-                       double total = 0;
-                       for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
-                            total += uniform(-1.0, 1.0);
-                       myDistribution[key] = total;
-                  }
-                  myDistribution.rehash();
-                  break;
-              case mdp.DistInitType.None:
-                  break;
+
+          if (init != mdp.DistInitType.None) {
+
+              foreach(T key ; mySpace) {
+                 final switch(init) {
+                  case mdp.DistInitType.Uniform:
+                      myDistribution[key] = 1.0;
+                      break;
+                  case mdp.DistInitType.RandomFromUniform:
+                      import std.random;
+                      myDistribution[key] = uniform01();
+                      break;
+                  case mdp.DistInitType.RandomFromGaussian:
+                      import std.random;
+                      double total = 0;
+                      for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
+                           total += uniform01();
+                      myDistribution[key] = total;
+                      break;
+                  case mdp.DistInitType.None: // should never be here
+                      break;
+
+                 }
+
+              }
+
+              myDistribution.rehash();
+              normalize();
 
           }
+
      }
 
 
@@ -108,8 +111,8 @@ class Distribution(T) : mdp.Distribution {
                throw new Exception("Empty distribution or all zero probabilities, cannot normalize");
           }
 
-          foreach( key ; myDistribution.keys) {
-               myDistribution[key] /= tot;
+          foreach(key ; myDistribution.keys) {
+               myDistribution[key] = myDistribution[key] / tot;
           }
 
           normalized = true;
@@ -211,7 +214,7 @@ class Distribution(T) : mdp.Distribution {
                myDistribution[key] = 0;
                p = (key in myDistribution);
           }
-          mixin("*p " ~ op ~ " rhs");
+          mixin("*p " ~ op ~ "= rhs;");
 
           normalized = false;
      }
