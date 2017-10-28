@@ -6,6 +6,7 @@
 "dependencies": {
  "tested": "~>0.9.4",
  "libirl": { "version" :"~master", "path": ".."}
-}
-
+},
+"targetName": "libirl-test",
+"targetPath": "."
 }
