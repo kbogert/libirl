@@ -1,0 +1,11 @@
+{
+"name": "libirl-test",
+"description": "A minimal D application.",
+"copyright": "Copyright © 2017, kbogert",
+"authors": ["kbogert"],
+"dependencies": {
+ "tested": "~>0.9.4",
+ "libirl": { "version" :"~master", "path": ".."}
+}
+
+}
