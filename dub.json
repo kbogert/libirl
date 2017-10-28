@@ -1,0 +1,11 @@
+{
+"name" :"libirl",
+"description" :"Inverse Reinforcement Learning Library",
+"copyright" :"Copyright © 2017, Kenneth Bogert",
+"authors" : ["Kenneth Bogert"],
+"sourcePaths" : ["source/"],
+"importPaths" :["source/"],
+"dependency" : {"tested" : "~>0.9.4"},
+"targetType" :"library",
+"subPackages" : [ "./test" ]
+}

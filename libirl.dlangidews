@@ -1,0 +1,10 @@
+{
+    "name": "libirl",
+    "description": " / ",
+    "projects": {
+        "libirl": "dub.json",
+        "libirl:libirl-test": "test/dub.json"
+    },
+    "includePath": {
+    }
+}

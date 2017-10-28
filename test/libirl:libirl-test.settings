@@ -1,0 +1,13 @@
+{
+    "build": {
+        "toolchain": "default",
+        "arch": "default",
+        "verbose": false,
+        "dub_additional_params": " --build=unittest"
+    },
+    "debug": {
+        "external_console": true,
+        "run_args": null,
+        "working_dir": null
+    }
+}
