@@ -6,7 +6,7 @@
         "dub_additional_params": null
     },
     "debug": {
-        "external_console": true,
+        "external_console": false,
         "run_args": null,
         "working_dir": null
     }

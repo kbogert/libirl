@@ -7,7 +7,7 @@
     },
     "debug": {
         "external_console": false,
-        "run_args": null,
-        "working_dir": null
+        "run_args": "",
+        "working_dir": ""
     }
 }

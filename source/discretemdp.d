@@ -1,7 +1,7 @@
 module discretemdp;
 
 import mdp;
-
+import std.math;
 
 class State {
 
@@ -55,6 +55,9 @@ class Distribution(T) : mdp.Distribution {
      bool normalized;
      Space!T mySpace;
 
+     public this() {
+        normalized = false;
+     }
 
      public this(double [T] distribution) {
           myDistribution = distribution;
@@ -242,6 +245,32 @@ class Distribution(T) : mdp.Distribution {
           }
           return result;
      }
+
+     
+    double KLD(Distribution!T other_dist) {
+	
+    	double returnval = 0;
+    	foreach (i, pr; myDistribution) {
+    		returnval += pr * log ( pr / other_dist[i]);
+    	}
+    	return returnval;
+	
+    }  
+
+    double entropy() {
+        double returnval = 0;
+
+        foreach (pr ; myDistribution.values) {
+            returnval += pr * log (pr);
+        }
+        return -returnval;
+
+    }
+
+    double crossEntropy(Distribution!T other_dist) {
+        return entropy() + KLD(other_dist);
+    }
+     
 }
 
 // Holds a discrete mapping from one object type to a distribution over

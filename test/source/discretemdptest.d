@@ -2,7 +2,11 @@ import discretemdp;
 import tested;
 import std.conv;
 import std.math;
+import mdp : DistInitType;
 
+
+double TOLERANCE = 0.000000001;
+double HALFTOLERANCE = 0.00001;
 class testObj {
 
    int a;
@@ -84,7 +88,7 @@ unittest {
 
    assert(dist.toString() == "", "Distribution toString incorrect");
 
-   dist = new Distribution!(testObj)(tos, mdp.DistInitType.Uniform);
+   dist = new Distribution!(testObj)(tos, DistInitType.Uniform);
 
    assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
 
@@ -97,7 +101,7 @@ unittest {
        writeln(dist);
    }
 
-   dist = new Distribution!(testObj)(tos, mdp.DistInitType.RandomFromUniform);
+   dist = new Distribution!(testObj)(tos, DistInitType.RandomFromUniform);
 
    assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
    double total = 0;
@@ -109,9 +113,9 @@ unittest {
        import std.stdio;
        writeln(dist);
    }
-   assert(abs(1.0 - total) < 0.000000001, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
+   assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
 
-   dist = new Distribution!(testObj)(tos, mdp.DistInitType.RandomFromGaussian);
+   dist = new Distribution!(testObj)(tos, DistInitType.RandomFromGaussian);
 
    assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
    total = 0;
@@ -125,7 +129,7 @@ unittest {
        writeln(dist);
    }
 
-   assert(abs(1.0 - total) < 0.000000001, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
+   assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
 
    
 }
@@ -199,5 +203,101 @@ unittest {
 @name("Distribution iterations")
 unittest {
 
-    assert(true);
+    // generate a distribution and test the iteration methods
+
+
+    Distribution!(testObj) dist = new Distribution!(testObj)();
+
+
+    int total = 0;
+    
+    for (int i = 0; i < 200; i ++) {
+        dist[new testObj(i)] = i;
+        total += i;
+    }
+
+    dist.normalize();
+
+
+    int counter = 0;
+    foreach(key ; dist.byKey()) {
+        counter += key.a;
+    }
+
+    assert(counter == total, "Didn't iterate through all the keys.");
+
+    double prob = 0;
+    
+    foreach(val ; dist.byValue()) {
+        prob += val;
+    }
+
+    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
+
+    counter = 0;
+    prob = 0;
+
+    foreach( T ; dist.byKeyValue()) {
+        counter += T.key.a;
+        prob += T.value;
+    }
+    
+    assert(counter == total, "Didn't iterate through all the keys.");
+    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
+
+    
+    counter = 0;
+    prob = 0;
+
+    foreach( key, value ; dist) {
+        counter += key.a;
+        prob += value;
+    }
+    
+    assert(counter == total, "Didn't iterate through all the keys.");
+    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
+
+    
+}
+
+@name("Distribution sampling") 
+unittest {
+
+    int distSize = 500;
+    int samples = 100000;
+    double KLD = 0.00295;
+
+    for (int k = 0; k < 10; k ++) {
+
+        Distribution!(testObj) dist = new Distribution!(testObj)();
+
+        
+        for (int i = 0; i < distSize; i ++) {
+            dist[new testObj(i)] = 1;
+        }
+
+        dist.normalize();
+
+        assert(abs(dist.entropy() - 6.21461) < HALFTOLERANCE, "Distribution entropy is incorrect");
+
+        // create a new distribution from the samples
+
+        Distribution!testObj dist2 = new Distribution!testObj();
+
+        for (int j = 0; j < samples; j ++) {
+            dist2[dist.sample()] += 1;
+        }
+
+        dist2.normalize();
+
+        // compare entropy of the two distributions, should about match
+        double theKld = dist.KLD(dist2);
+        
+        assert(theKld < KLD, "Sampled distribution is too different from primary");
+
+        assert(abs(dist.crossEntropy(dist2) - 6.21461) <= theKld , "Cross entropy incorrect" );
+    }
+
+
+    
 }
