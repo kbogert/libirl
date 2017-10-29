@@ -301,3 +301,100 @@ unittest {
 
     
 }
+
+
+@name("Empty Distribution") 
+unittest {
+
+    Distribution!(testObj) dist = new Distribution!(testObj)();
+
+
+    try {
+        dist.normalize();
+
+        assert(false, "Normalize should throw an exception with an empty distribution");
+
+    } catch (Exception e) {
+        // This is supposed to happen
+    }
+
+    assert(dist.argmax() is null, "Argmax not working right in an empty distribution");
+
+    foreach(t, v ; dist) {
+        assert(false, "There should be nothing to iter over in an empty distribution");
+    }
+
+    foreach(key ; dist.byKey()) {
+        assert(false, "There should be nothing to iter over in an empty distribution");
+    }
+
+    foreach(val ; dist.byValue()) {
+        assert(false, "There should be nothing to iter over in an empty distribution");
+    }
+
+    foreach( T ; dist.byKeyValue()) {
+        assert(false, "There should be nothing to iter over in an empty distribution");
+    }
+
+    assert(dist[new testObj(0)] == 0, "Index should have returned a zero for everything in an empty distribution");
+
+    assert(dist.size() == 0, "Size should be zero");
+
+    assert(dist.sample() is null, "Sample should return null");
+}
+
+
+@name("Space tests")
+unittest {
+    Distribution!(testObj) dist = new Distribution!(testObj)(new testObjSpace(10));
+
+    try {
+        dist[new testObj(11)];
+
+        assert(false, "Should not allow access to objects outside of the space");      
+    } catch (Exception e) {
+        // this is supposed to happen
+    }
+
+    
+    try {
+        dist[new testObj(11)] = 1.0;
+
+        assert(false, "Should not allow access to objects outside of the space");      
+    } catch (Exception e) {
+        // this is supposed to happen
+    }
+    
+    try {
+        dist[new testObj(11)] += 1;
+
+        assert(false, "Should not allow access to objects outside of the space");      
+    } catch (Exception e) {
+        // this is supposed to happen
+    }
+}
+
+
+@name("Distribution optimize")
+unittest {
+
+    // generate a distribution and test the iteration methods
+
+
+    Distribution!(testObj) dist = new Distribution!(testObj)();
+
+
+    
+    for (int i = 0; i < 200; i ++) {
+        dist[new testObj(i)] = i;
+    }
+
+    dist.normalize();
+
+    assert(dist.size() == 200, "Distribution size is wrong");
+
+    dist.optimize();
+
+    assert(dist.size() == 199, "Distribution size not reduced by optimize()");
+    
+}

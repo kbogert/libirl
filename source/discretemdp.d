@@ -127,6 +127,11 @@ class Distribution(T) : mdp.Distribution {
 
      // will always return a sample
      public T sample() {
+
+          if (size() == 0) {
+             return null;
+          }
+          
           normalize();
 
           import std.random;
@@ -270,7 +275,16 @@ class Distribution(T) : mdp.Distribution {
     double crossEntropy(Distribution!T other_dist) {
         return entropy() + KLD(other_dist);
     }
-     
+
+    void optimize() {
+        foreach(key, val ; myDistribution) {
+            if (val == 0) {
+                myDistribution.remove(key);
+            }
+        }
+
+        myDistribution.rehash();
+    }
 }
 
 // Holds a discrete mapping from one object type to a distribution over
