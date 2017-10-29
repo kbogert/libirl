@@ -21,4 +21,4 @@ class Model {
 }
 
 
-enum DistInitType {None, Uniform, RandomFromUniform, RandomFromGaussian};
+enum DistInitType {None, Uniform, Exponential, RandomFromGaussian};

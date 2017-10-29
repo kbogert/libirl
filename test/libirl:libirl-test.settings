@@ -3,11 +3,11 @@
         "toolchain": "default",
         "arch": "default",
         "verbose": false,
-        "dub_additional_params": ""
+        "dub_additional_params": null
     },
     "debug": {
         "external_console": false,
-        "run_args": "",
-        "working_dir": ""
+        "run_args": null,
+        "working_dir": null
     }
 }

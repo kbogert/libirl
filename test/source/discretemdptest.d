@@ -101,7 +101,7 @@ unittest {
        writeln(dist);
    }
 
-   dist = new Distribution!(testObj)(tos, DistInitType.RandomFromUniform);
+   dist = new Distribution!(testObj)(tos, DistInitType.Exponential, 10.0);
 
    assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
    double total = 0;
@@ -111,6 +111,7 @@ unittest {
 
    debug {
        import std.stdio;
+       writeln("Exponential");
        writeln(dist);
    }
    assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
@@ -164,11 +165,11 @@ unittest {
 
    dist.normalize();
 
-   debug {
+ /*  debug {
        import std.stdio;
        writeln();
        writeln(dist);
-   }
+   }*/
 
    int sum = 0;
    foreach(b ; 0 .. 200)
@@ -184,11 +185,11 @@ unittest {
 
    assert(! dist.isNormalized(), "Distribution should not be normalized");
 
-   debug {
+/*   debug {
        import std.stdio;
        writeln();
        writeln(dist);
-   }
+   }*/
 
 
    dist.normalize();
@@ -265,9 +266,9 @@ unittest {
 
     int distSize = 500;
     int samples = 100000;
-    double KLD = 0.00295;
+    double KLD = 0.0035;
 
-    for (int k = 0; k < 10; k ++) {
+    for (int k = 0; k < 100; k ++) {
 
         Distribution!(testObj) dist = new Distribution!(testObj)();
 
@@ -292,8 +293,9 @@ unittest {
 
         // compare entropy of the two distributions, should about match
         double theKld = dist.KLD(dist2);
-        
-        assert(theKld < KLD, "Sampled distribution is too different from primary");
+
+        assert(theKld > 0, "KLD not working, it is <= 0");        
+        assert(theKld < KLD, "Sampled distribution is too different from primary: " ~ to!string(theKld) ~ " > " ~ to!string(KLD));
 
         assert(abs(dist.crossEntropy(dist2) - 6.21461) <= theKld , "Cross entropy incorrect" );
     }

@@ -65,7 +65,7 @@ class Distribution(T) : mdp.Distribution {
 
      }
 
-     public this(Space!T s, mdp.DistInitType init = mdp.DistInitType.None) {
+     public this(Space!T s, mdp.DistInitType init = mdp.DistInitType.None, double skewness = 10) {
           mySpace = s;
           normalized = false;
 
@@ -76,9 +76,9 @@ class Distribution(T) : mdp.Distribution {
                   case mdp.DistInitType.Uniform:
                       myDistribution[key] = 1.0;
                       break;
-                  case mdp.DistInitType.RandomFromUniform:
+                  case mdp.DistInitType.Exponential:
                       import std.random;
-                      myDistribution[key] = uniform01();
+                      myDistribution[key] = exp(uniform01() * skewness);
                       break;
                   case mdp.DistInitType.RandomFromGaussian:
                       import std.random;
