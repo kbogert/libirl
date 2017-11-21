@@ -1,20 +1,32 @@
 {
     "startupProject": "libirl:libirl-test",
     "expandedItems": [
+        "/home/kbogert/Documents/libirl/test/source",
         "/home/kbogert/workspace/libirl/dub.json",
         "/home/kbogert/workspace/libirl/source",
-        "/home/kbogert/workspace/libirl/test/source"
+        "/home/kbogert/workspace/libirl/test/source",
+        "/home/kbogert/Documents/libirl/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/workspace/libirl/test/dub.json",
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/mdp.d",
     "breakpoints": [
     ],
     "bookmarks": [
     ],
     "files": [
         {
-            "file": "/home/kbogert/workspace/libirl/test/dub.json",
-            "column": 0,
-            "row": 0
+            "file": "/home/kbogert/Documents/libirl/test/source/discretemdptest.d",
+            "column": 272,
+            "row": 29
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/source/discretemdp.d",
+            "column": 76,
+            "row": 48
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/source/mdp.d",
+            "column": 18,
+            "row": 37
         }
     ],
     "buildConfiguration": 2

@@ -49,7 +49,7 @@ class StateActionStateSpace : Space!StateActionState {
 }
 
 // Holds a discrete distribution, mapping a space of individual objects to normalized probabilities
-class Distribution(T) : mdp.Distribution {
+class Distribution(T) {
 
      double [T] myDistribution;
      bool normalized;
@@ -285,12 +285,6 @@ class Distribution(T) : mdp.Distribution {
 
         myDistribution.rehash();
     }
-}
-
-// Holds a discrete mapping from one object type to a distribution over
-class Mapping : mdp.Mapping {
-
-
 }
 
 class Model : mdp.Model {
