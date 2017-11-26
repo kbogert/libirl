@@ -20,13 +20,18 @@
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/discretemdp.d",
-            "column": 76,
-            "row": 48
+            "column": 47,
+            "row": 0
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/mdp.d",
-            "column": 18,
-            "row": 37
+            "column": 21,
+            "row": 1
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/test/../source/discretemdp.d",
+            "column": 47,
+            "row": 0
         }
     ],
     "buildConfiguration": 2
