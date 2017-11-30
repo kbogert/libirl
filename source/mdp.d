@@ -16,7 +16,8 @@ class Function (RETURN_TYPE, PARAM ...) {
 
     abstract Function!(RETURN_TYPE, removeLast(ToRemove) ) max(ToRemove ...)();
 
-    abstract PARAM argmax();
+    // this should return a function that maps some of params to others, so argmax(Action) on Q(S,A) => R returns a policy S => A
+    abstract tuple!PARAM argmax();
 
     abstract Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) sumout();
     
@@ -26,11 +27,11 @@ class Function (RETURN_TYPE, PARAM ...) {
     abstract Function!(RETURN_TYPE, B) apply(A : PARAM[PARAM.length - 1], B : PARAM[0 .. PARAM.length - 2] )(Function!(A, B) funct);
 
 
-    private template removeLast(T) {
+    protected template removeLast(T) {
         auto removeLast = Reverse!(Erase!(T, Reverse!(PARAM)));
     }
 
-    private template removeLast(FIRST, T ...) {
+    protected template removeLast(FIRST, T ...) {
         auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
     }
 }

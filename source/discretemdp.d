@@ -48,6 +48,46 @@ class StateActionStateSpace : Space!StateActionState {
 
 }
 
+class aa_FunctionImplementation(RETURN_TYPE, PARAM ...) : Function!(RETURN_TYPE, PARAM) {
+
+
+    // I think I need a mixin for this
+    RETURN_TYPE [PARAM] storage;
+
+    Space!PARAM mySpace;
+
+    override Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
+        return new aa_FunctionImplementation!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2])();
+    }
+
+    override Function!(RETURN_TYPE, removeLast(ToRemove) ) max(ToRemove ...)() {
+       return new aa_FunctionImplementation!(RETURN_TYPE, removeLast(ToRemove))();
+ 
+    }
+
+    override tuple!PARAM argmax() {
+        return null;
+    }
+
+    override Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) sumout() {
+       return new aa_FunctionImplementation!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2])();
+ 
+    }
+    
+    override Function!(RETURN_TYPE, removeLast(ToRemove) ) sumout(ToRemove ...)() {
+       return new aa_FunctionImplementation!(RETURN_TYPE, removeLast(ToRemove))();
+ 
+    }
+
+    // This = (S, A) => R , funct = S => A, returns S => R
+    override Function!(RETURN_TYPE, B) apply(A : PARAM[PARAM.length - 1], B : PARAM[0 .. PARAM.length - 2] )(Function!(A, B) funct) {
+        
+    }
+
+
+}
+
+
 // Holds a discrete distribution, mapping a space of individual objects to normalized probabilities
 class Distribution(T) {
 
