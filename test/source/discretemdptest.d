@@ -400,3 +400,160 @@ unittest {
     assert(dist.size() == 199, "Distribution size not reduced by optimize()");
     
 }
+
+
+
+// Function and space experimenting
+import std.traits;
+
+class func(RETURN_TYPE, PARAM ...) {
+
+    RETURN_TYPE [PARAM] storage;
+    space!PARAM mySpace;
+
+    public this(space!PARAM s) {
+        mySpace = s;
+    }
+
+    
+    RETURN_TYPE opIndex(PARAM i) {
+        RETURN_TYPE* p;
+        p = (i in storage);
+        if (p !is null) {
+            return *p;
+        }
+        if ( mySpace !is null && ! mySpace.contains(i)) {
+            throw new Exception("ERROR, key is not in the space this function is defined over.");
+        }
+        return 0;
+    }
+
+
+    void opIndexAssign(RETURN_TYPE value, PARAM i) {
+          if ( mySpace !is null && ! mySpace.contains(i)) {
+               throw new Exception("ERROR, key is not in the space this function is defined over.");
+          }
+          storage[i] = value;
+    }
+
+
+    // FOR NUMERIC RETURN TYPES ONLY
+    void opIndexOpAssign(string op)(RETURN_TYPE rhs, T key)
+        if ( isNumeric!(RETURN_TYPE))
+    {
+        RETURN_TYPE* p;
+        p = (key in storage);
+        if (p is null) {
+            if ( mySpace !is null && ! mySpace.contains(key)) {
+                throw new Exception("ERROR, key is not in the space this distribution is defined over.");
+            }
+            storage[key] = 0;
+            p = (key in myDistribution);
+        }
+        mixin("*p " ~ op ~ "= rhs;");
+    }    
+    
+    auto byKey() {
+        return storage.byKey();
+    }
+
+    auto byValue() {
+        return storage.byValue();
+    }
+
+    auto byKeyValue() {
+        return storage.byKeyValue();
+    }
+
+
+    RETURN_TYPE max() 
+        if (PARAM.length == 1)
+    {
+       
+        RETURN_TYPE max;
+        bool setMax = false;
+        
+        foreach (auto key : mySpace) {
+
+            RETURN_TYPE val = storage[key];
+            
+            if (! setMax ) {
+                max = val;
+                setMax = true;
+            } else {
+                if (val > max) {
+                    max = val;
+                }
+            }                
+            
+        }
+
+        return max;
+
+    }
+
+            
+    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() 
+        if (PARAM.length > 1)
+    {
+        alias SUBPARAM PARAM[0 .. PARAM.length - 2]
+
+        auto newSpace = mySpace.orth_project!(SUBPARAM)(true);
+        
+        auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
+
+        foreach (auto key : newSpace) {
+
+            RETURN_TYPE max;
+            bool setMax = false;
+
+            foreach( auto subkey : mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
+
+                auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
+                RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                
+                if (! setMax ) {
+                    max = val;
+                    setMax = true;
+                } else {
+                    if (val > max) {
+                        max = val;
+                    }
+                }                
+                
+            }
+
+            returnval[key] = max;   
+        }
+
+        return returnval;
+
+    }
+
+        
+}
+
+
+
+
+
+import std.typetuple;
+
+class space(T ...) {
+
+    abstract public size_t size();
+    abstract public bool contains(T i);
+    abstract int opApply(int delegate(ref T) dg);
+    abstract space(PROJECTED_DIMS) orth_project(PROJECTED_DIMS)(bool frontDimsFirst = true)
+        if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
+
+
+    protected template dimOfSpace(DIM) {
+        enum dimOfSpace = (staticIndexOf!(DIM, T) != -1);
+    }
+}
+
+
+// now create some spaces, 1D, 2D, 3D
+
+
