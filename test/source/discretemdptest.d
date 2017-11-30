@@ -411,8 +411,11 @@ class func(RETURN_TYPE, PARAM ...) {
     RETURN_TYPE [PARAM] storage;
     space!PARAM mySpace;
 
-    public this(space!PARAM s) {
+    RETURN_TYPE funct_default;
+
+    public this(space!PARAM s, RETURN_TYPE def) {
         mySpace = s;
+        funct_default = def;
     }
 
     
@@ -425,7 +428,7 @@ class func(RETURN_TYPE, PARAM ...) {
         if ( mySpace !is null && ! mySpace.contains(i)) {
             throw new Exception("ERROR, key is not in the space this function is defined over.");
         }
-        return 0;
+        return funct_default;
     }
 
 
@@ -438,16 +441,14 @@ class func(RETURN_TYPE, PARAM ...) {
 
 
     // FOR NUMERIC RETURN TYPES ONLY
-    void opIndexOpAssign(string op)(RETURN_TYPE rhs, T key)
-        if ( isNumeric!(RETURN_TYPE))
-    {
+    void opIndexOpAssign(string op)(RETURN_TYPE rhs, T key) {
         RETURN_TYPE* p;
         p = (key in storage);
         if (p is null) {
             if ( mySpace !is null && ! mySpace.contains(key)) {
                 throw new Exception("ERROR, key is not in the space this distribution is defined over.");
             }
-            storage[key] = 0;
+            storage[key] = funct_def;
             p = (key in myDistribution);
         }
         mixin("*p " ~ op ~ "= rhs;");
