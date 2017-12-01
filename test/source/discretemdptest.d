@@ -467,14 +467,14 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
 
-    RETURN_TYPE max() 
+    RETURN_TYPE max(PARAM)() 
         if (PARAM.length == 1)
     {
        
         RETURN_TYPE max;
         bool setMax = false;
         
-        foreach (auto key : mySpace) {
+        foreach (key ; mySpace) {
 
             RETURN_TYPE val = storage[key];
             
@@ -494,21 +494,21 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
             
-    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() 
+    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max(PARAM)() 
         if (PARAM.length > 1)
     {
-        alias SUBPARAM PARAM[0 .. PARAM.length - 2]
+        alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
 
         auto newSpace = mySpace.orth_project!(SUBPARAM)(true);
         
         auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
 
-        foreach (auto key : newSpace) {
+        foreach (key ; newSpace) {
 
             RETURN_TYPE max;
             bool setMax = false;
 
-            foreach( auto subkey : mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
+            foreach( subkey ; mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
 
                 auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                 RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -545,9 +545,11 @@ class space(T ...) {
     abstract public size_t size();
     abstract public bool contains(T i);
     abstract int opApply(int delegate(ref T) dg);
-    abstract space(PROJECTED_DIMS) orth_project(PROJECTED_DIMS)(bool frontDimsFirst = true)
+    abstract space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
 
+
+    abstract space!(T, A) cartesian_product(A) (space!(A) a);
 
     protected template dimOfSpace(DIM) {
         enum dimOfSpace = (staticIndexOf!(DIM, T) != -1);
