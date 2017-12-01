@@ -467,7 +467,7 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
 
-    RETURN_TYPE max(PARAM)() 
+    RETURN_TYPE max(PARAMS : PARAM)() 
         if (PARAM.length == 1)
     {
        
@@ -494,7 +494,7 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
             
-    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max(PARAM)() 
+    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max(PARAMS : PARAM)() 
         if (PARAM.length > 1)
     {
         alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
@@ -549,7 +549,7 @@ class space(T ...) {
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
 
 
-    abstract space!(T, A) cartesian_product(A) (space!(A) a);
+    abstract space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a);
 
     protected template dimOfSpace(DIM) {
         enum dimOfSpace = (staticIndexOf!(DIM, T) != -1);
