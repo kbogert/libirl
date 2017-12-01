@@ -560,4 +560,54 @@ class space(T ...) {
 
 // now create some spaces, 1D, 2D, 3D
 
+class space_impl(T ...) : space(T) {
+
+    T [] storage;
+
+
+    public this(T [] elements) {
+        storage = elements;
+    }
+    
+    override public size_t size() {
+        return storage.length;
+    }
+    
+    override public bool contains(T i) {
+         foreach( a ; storage) 
+             if (a == i)
+                 return true;
+         return false;
+    }
+   
+    override int opApply(int delegate(ref T) dg) {
+          int result = 0;
+          foreach (value ; storage) {
+               result = dg(value);
+               if (result) break;
+
+          }
+          return result;
+    }
+    
+    override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
+        if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) 
+    {
+
+        PROJECTED_DIMS [] newElements;
+
+        // go through storage, only adding unique tuples to newElementse
+        // this is harder than it needs to be, really would be easy with multi-dimensional arrays
+        // or, statically figuring out the parameter ordering
+
+        return new space!(PROJECTED_DIMS)(newElements);
+    }
+
+
+    override space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a) 
+
+    }
+
+
+} 
 
