@@ -467,52 +467,18 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
 
-    RETURN_TYPE max(PARAMS : PARAM)() 
-        if (PARAM.length == 1)
-    {
+    static if (PARAM.length == 1) {
+        
+
+        RETURN_TYPE max() {
        
-        RETURN_TYPE max;
-        bool setMax = false;
-        
-        foreach (key ; mySpace) {
-
-            RETURN_TYPE val = storage[key];
-            
-            if (! setMax ) {
-                max = val;
-                setMax = true;
-            } else {
-                if (val > max) {
-                    max = val;
-                }
-            }                
-            
-        }
-
-        return max;
-
-    }
-
-            
-    func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max(PARAMS : PARAM)() 
-        if (PARAM.length > 1)
-    {
-        alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
-
-        auto newSpace = mySpace.orth_project!(SUBPARAM)(true);
-        
-        auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
-
-        foreach (key ; newSpace) {
-
             RETURN_TYPE max;
             bool setMax = false;
+        
+            foreach (key ; mySpace) {
 
-            foreach( subkey ; mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
-
-                auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
-                RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
-                
+                RETURN_TYPE val = storage[key];
+            
                 if (! setMax ) {
                     max = val;
                     setMax = true;
@@ -521,14 +487,49 @@ class func(RETURN_TYPE, PARAM ...) {
                         max = val;
                     }
                 }                
-                
+            
             }
 
-            returnval[key] = max;   
+            return max;
+
         }
+        
+    } else {
+            
+        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
+            alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
 
-        return returnval;
+            auto newSpace = mySpace.orth_project!(SUBPARAM)(true);
+        
+            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
 
+            foreach (key ; newSpace) {
+
+                RETURN_TYPE max;
+                bool setMax = false;
+
+                foreach( subkey ; mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
+
+                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
+                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                
+                    if (! setMax ) {
+                        max = val;
+                        setMax = true;
+                    } else {
+                        if (val > max) {
+                            max = val;
+                        }
+                    }                
+                
+                }
+
+                returnval[key] = max;   
+            }
+
+            return returnval;
+
+        }
     }
 
         
