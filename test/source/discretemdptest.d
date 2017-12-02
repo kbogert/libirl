@@ -499,7 +499,7 @@ class func(RETURN_TYPE, PARAM ...) {
         func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
             alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
 
-            auto newSpace = mySpace.orth_project!(SUBPARAM)(true);
+            auto newSpace = mySpace.orth_project!(SUBPARAM)();
         
             auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
 
@@ -508,7 +508,7 @@ class func(RETURN_TYPE, PARAM ...) {
                 RETURN_TYPE max;
                 bool setMax = false;
 
-                foreach( subkey ; mySpace.orth_project!(PARAM[PARAM.length - 1])(false) ) {
+                foreach( subkey ; mySpace.remove_dim!(SUBPARAM)() ) {
 
                     auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                     RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -530,8 +530,54 @@ class func(RETURN_TYPE, PARAM ...) {
             return returnval;
 
         }
+
+
+        func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() {
+            alias SUBPARAM = removeLast(TOREMOVE)];
+
+            auto newSpace = mySpace.orth_project!(SUBPARAM)();
+        
+            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
+
+            foreach (key ; newSpace) {
+
+                RETURN_TYPE max;
+                bool setMax = false;
+
+                foreach( subkey ; mySpace.remove_dim!(SUBPARAM)() ) {
+
+                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
+                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                
+                    if (! setMax ) {
+                        max = val;
+                        setMax = true;
+                    } else {
+                        if (val > max) {
+                            max = val;
+                        }
+                    }                
+                
+                }
+
+                returnval[key] = max;   
+            }
+
+            return returnval;
+
+            
+        }
     }
 
+
+    
+    protected template removeLast(FIRST, T ...) {
+        static if (T.length > 0) {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
+        } else {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(PARAM)));
+        }
+    }
         
 }
 
