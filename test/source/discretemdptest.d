@@ -497,43 +497,14 @@ class func(RETURN_TYPE, PARAM ...) {
     } else {
             
         func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
-            alias SUBPARAM = PARAM[0 .. PARAM.length - 2];
 
-            auto newSpace = mySpace.orth_project!(SUBPARAM)();
-        
-            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
-
-            foreach (key ; newSpace) {
-
-                RETURN_TYPE max;
-                bool setMax = false;
-
-                foreach( subkey ; mySpace.remove_dim!(SUBPARAM)() ) {
-
-                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
-                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
-                
-                    if (! setMax ) {
-                        max = val;
-                        setMax = true;
-                    } else {
-                        if (val > max) {
-                            max = val;
-                        }
-                    }                
-                
-                }
-
-                returnval[key] = max;   
-            }
-
-            return returnval;
+            return max(PARAM[PARAM.length - 1])();
 
         }
 
 
         func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() {
-            alias SUBPARAM = removeLast(TOREMOVE)];
+            alias SUBPARAM = removeLast!(TOREMOVE);
 
             auto newSpace = mySpace.orth_project!(SUBPARAM)();
         
@@ -544,7 +515,7 @@ class func(RETURN_TYPE, PARAM ...) {
                 RETURN_TYPE max;
                 bool setMax = false;
 
-                foreach( subkey ; mySpace.remove_dim!(SUBPARAM)() ) {
+                foreach( subkey ; mySpace.remove_dim_front!(SUBPARAM)() ) {
 
                     auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                     RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -595,7 +566,10 @@ class space(T ...) {
     abstract space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
 
-    abstract space!( removeLast(DIMS) ) remove_dim(DIMS...)()
+    abstract space!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) ;
+        
+    abstract space!( removeLast(DIMS) ) remove_dim_back(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) ;
 
     abstract space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a);
@@ -658,10 +632,83 @@ class space_impl(T ...) : space!(T) {
     override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) 
     {
-        return remove_dim( removeFirst(PROJECTED_DIMS) )();
+        return remove_dim_back( removeFirst(PROJECTED_DIMS) )();
     }
 
-    override space!( removeLast!(DIMS) ) remove_dim(DIMS...)()
+    override space!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) 
+    {
+
+        alias NEWDIMS = removeFirst!(DIMS);
+        
+        bool [Tuple!(NEWDIMS)] newElements;
+
+        // go through storage, only adding unique tuples to newElements
+        // this is harder than it needs to be, really would be easy with multi-dimensional arrays
+        // or, statically figuring out the parameter ordering
+
+       // string entry_mapping = "";
+
+        // what I want to do here is map from T to PROJECTED_DIMS.  I can do this by mapping each T entry to a number     
+
+        // this won't work, logic is all wrong
+        
+  /*      int added = 0;
+        //maybe a recursive function?
+        static foreach(i, p ; PROJECTED_DIMS) {
+
+            PROJECT_DIMS_OUTER:
+            static foreach(j ; i .. T.length) {
+
+                static if (typeid(p) == typeid(T[j])) {
+                    
+                    if (added > 0) {
+                        entry_mapping ~= ",";
+                    }
+            
+                    entry_mapping ~= "entry[" ~ i ~ "]";
+                    added = added + 1;
+                    break PROJECT_DIMS_OUTER;
+                }    
+            }
+            
+        }*/
+
+        // wait, shit should I do this at runtime?  I can build tuples from others, so I just do this one at a time!
+        // inside this foreach, a static foreach to generate the appropriate tuple = tuple!(tuple, entry[i])
+        
+        foreach (entry ; storage) {
+
+            auto reduced_entry = entry;
+
+            // generate lines of code to remove fields from reduced_entry
+
+            auto REDUCED_DIMS = Reverse!(Reverse!(T));
+            
+            static foreach(i, p ; DIMS) {
+
+                static if (staticIndexOf!( p, REDUCED_DIMS) == 0) {
+                    reduced_entry = reduced_entry[1 .. $];
+
+                } else {
+                    reduced_entry = Tuple!(reduced_entry[0 .. staticIndexOf!( p, REDUCED_DIMS )] , reduced_entry[staticIndexOf!( p, REDUCED_DIMS ) + 1 .. $] );
+                }
+
+                REDUCED_DIMS = Erase!( p, REDUCED_DIMS );
+
+            }
+            
+            
+            newElements [ reduced_entry ] = true;
+        }
+
+        
+
+        return new space!(NEWDIMS)(newElements.keys);
+        
+    }
+
+    override space!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) 
     {
 
