@@ -493,9 +493,34 @@ class func(RETURN_TYPE, PARAM ...) {
             return max;
 
         }
+
+        Tuple!(PARAM) argmax() {
+            RETURN_TYPE max;
+            Tuple!(PARAM) max_param;
+            bool setMax = false;
+        
+            foreach (key ; mySpace) {
+
+                RETURN_TYPE val = storage[key];
+            
+                if (! setMax ) {
+                    max = val;
+                    max_param = key;
+                    setMax = true;
+                } else {
+                    if (val > max) {
+                        max = val;
+                        max_param = key;
+                    }
+                }                
+            
+            }
+
+            return max_param;
+        }
         
     } else {
-            
+        
         func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
 
             return max(PARAM[PARAM.length - 1])();
@@ -503,7 +528,9 @@ class func(RETURN_TYPE, PARAM ...) {
         }
 
 
-        func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() {
+        func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() 
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSpace, TOREMOVE))
+        {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
             auto newSpace = mySpace.orth_project!(SUBPARAM)();
@@ -538,6 +565,53 @@ class func(RETURN_TYPE, PARAM ...) {
 
             
         }
+
+        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 2] ) argmax() {
+
+            return argmax(PARAM[PARAM.length - 1])();
+
+        }
+        
+        func!(Tuple!(TOREMOVE), removeLast(TOREMOVE) ) argmax(TOREMOVE...)() 
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSpace, TOREMOVE))
+
+        {
+            alias SUBPARAM = removeLast!(TOREMOVE);
+
+            auto newSpace = mySpace.orth_project!(SUBPARAM)();
+        
+            auto returnval = new func!(Tuple!(TOREMOVE),SUBPARAM)(newSpace);
+
+            foreach (key ; newSpace) {
+
+                RETURN_TYPE max;
+                Tuple!(TOREMOVE) max_key;
+                bool setMax = false;
+
+                foreach( subkey ; mySpace.remove_dim_front!(SUBPARAM)() ) {
+
+                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
+                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                
+                    if (! setMax ) {
+                        max = val;
+                        max_key = subkey;
+                        setMax = true;
+                    } else {
+                        if (val > max) {
+                            max = val;
+                            max_key = subkey;
+                        }
+                    }                
+                
+                }
+
+                returnval[key] = max_key;   
+            }
+
+            return returnval;
+        }
+        
     }
 
 
@@ -549,7 +623,11 @@ class func(RETURN_TYPE, PARAM ...) {
             auto removeLast = Reverse!(Erase!(FIRST, Reverse!(PARAM)));
         }
     }
-        
+
+    
+    protected template dimOfSpace(DIM) {
+        enum dimOfSpace = (staticIndexOf!(DIM, PARAM) != -1);
+    }    
 }
 
 
@@ -599,6 +677,8 @@ import std.typecons;
 
 // now create some spaces, 1D, 2D, 3D
 
+
+// could be optimized for 1D spaces by removing the tuples, if I feel like it I guess
 class space_impl(T ...) : space!(T) {
 
     Tuple!(T) [] storage;
@@ -618,7 +698,7 @@ class space_impl(T ...) : space!(T) {
                  return true;
          return false;
     }
-   
+
     override int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {
