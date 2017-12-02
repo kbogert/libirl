@@ -544,28 +544,47 @@ import std.typetuple;
 class space(T ...) {
 
     abstract public size_t size();
-    abstract public bool contains(T i);
-    abstract int opApply(int delegate(ref T) dg);
-    abstract space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
+    abstract public bool contains(Tuple!(T) i);
+    abstract int opApply(int delegate(ref Tuple!(T)) dg);
+    abstract space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
 
+    abstract space!( removeLast(DIMS) ) remove_dim(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) ;
 
     abstract space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a);
 
     protected template dimOfSpace(DIM) {
         enum dimOfSpace = (staticIndexOf!(DIM, T) != -1);
     }
+
+    protected template removeLast(FIRST, REMAIN ...) {
+        static if (REMAIN.length > 0) {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast( REMAIN ) )));
+        } else {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(T) ));
+        }
+    }
+
+    protected template removeFirst(FIRST, REMAIN ...) {
+        static if (REMAIN.length > 0) {
+            auto removeFirst = Erase!(FIRST, removeFirst( REMAIN ) );
+        } else {
+            auto removeFirst = Erase!(FIRST, T);
+        }
+    }
 }
 
+import std.typecons;
 
 // now create some spaces, 1D, 2D, 3D
 
-class space_impl(T ...) : space(T) {
+class space_impl(T ...) : space!(T) {
 
-    T [] storage;
+    Tuple!(T) [] storage;
 
 
-    public this(T [] elements) {
+    public this(Tuple!(T) [] elements) {
         storage = elements;
     }
     
@@ -573,14 +592,14 @@ class space_impl(T ...) : space(T) {
         return storage.length;
     }
     
-    override public bool contains(T i) {
+    override public bool contains(Tuple!(T) i) {
          foreach( a ; storage) 
              if (a == i)
                  return true;
          return false;
     }
    
-    override int opApply(int delegate(ref T) dg) {
+    override int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {
                result = dg(value);
@@ -593,19 +612,97 @@ class space_impl(T ...) : space(T) {
     override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) 
     {
+        return remove_dim( removeFirst(PROJECTED_DIMS) )();
+    }
 
-        PROJECTED_DIMS [] newElements;
+    override space!( removeLast!(DIMS) ) remove_dim(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) 
+    {
 
-        // go through storage, only adding unique tuples to newElementse
+        alias NEWDIMS = removeLast!(DIMS);
+        
+        bool [Tuple!(NEWDIMS)] newElements;
+
+        // go through storage, only adding unique tuples to newElements
         // this is harder than it needs to be, really would be easy with multi-dimensional arrays
         // or, statically figuring out the parameter ordering
 
-        return new space!(PROJECTED_DIMS)(newElements);
+       // string entry_mapping = "";
+
+        // what I want to do here is map from T to PROJECTED_DIMS.  I can do this by mapping each T entry to a number     
+
+        // this won't work, logic is all wrong
+        
+  /*      int added = 0;
+        //maybe a recursive function?
+        static foreach(i, p ; PROJECTED_DIMS) {
+
+            PROJECT_DIMS_OUTER:
+            static foreach(j ; i .. T.length) {
+
+                static if (typeid(p) == typeid(T[j])) {
+                    
+                    if (added > 0) {
+                        entry_mapping ~= ",";
+                    }
+            
+                    entry_mapping ~= "entry[" ~ i ~ "]";
+                    added = added + 1;
+                    break PROJECT_DIMS_OUTER;
+                }    
+            }
+            
+        }*/
+
+        // wait, shit should I do this at runtime?  I can build tuples from others, so I just do this one at a time!
+        // inside this foreach, a static foreach to generate the appropriate tuple = tuple!(tuple, entry[i])
+        
+        foreach (entry ; storage) {
+
+            auto reduced_entry = entry.reverse ;
+
+            // generate lines of code to remove fields from reduced_entry
+
+            auto REDUCED_DIMS = REVERSE!(T);
+            
+            static foreach(i, p ; DIMS) {
+
+                static if (staticIndexOf!( p, REDUCED_DIMS) == 0) {
+                    reduced_entry = reduced_entry[1 .. $];
+
+                } else {
+                    reduced_entry = Tuple!(reduced_entry[0 .. staticIndexOf!( p, REDUCED_DIMS )] , reduced_entry[staticIndexOf!( p, REDUCED_DIMS ) + 1 .. $] );
+                }
+
+                REDUCED_DIMS = Erase!( p, REDUCED_DIMS );
+
+            }
+            
+            
+            newElements [ reduced_entry.reverse ] = true;
+        }
+
+        
+
+        return new space!(NEWDIMS)(newElements.keys);
     }
 
 
-    override space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a) 
+    override space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a) {
 
+        alias NEWDIMS = AliasSeq!(T, A);
+
+        Tuple!(NEWDIMS) [] newElements;  // TODO: Optimise this, we know how big this array should be
+
+        foreach (mine; storage) {
+
+            foreach (yours; a) {
+
+                newElements ~= Tuple!(mine, yours);
+            }
+        }
+
+        return new space!(NEWDIMS)(newElements);
     }
 
 
