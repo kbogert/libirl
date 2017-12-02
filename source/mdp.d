@@ -27,12 +27,12 @@ class Function (RETURN_TYPE, PARAM ...) {
     abstract Function!(RETURN_TYPE, B) apply(A : PARAM[PARAM.length - 1], B : PARAM[0 .. PARAM.length - 2] )(Function!(A, B) funct);
 
 
-    protected template removeLast(T) {
-        auto removeLast = Reverse!(Erase!(T, Reverse!(PARAM)));
-    }
-
     protected template removeLast(FIRST, T ...) {
-        auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
+        static if (T.length > 0) {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
+        } else {
+            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(PARAM)));
+        }
     }
 }
 
