@@ -709,7 +709,7 @@ class space_impl(T ...) : space!(T) {
           return result;
     }
     
-    override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)(bool frontDimsFirst = true)
+    override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) 
     {
         return remove_dim_back( removeFirst(PROJECTED_DIMS) )();
