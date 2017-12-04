@@ -798,24 +798,24 @@ class set(T ...) {
 
         // MAYBE THIS COULD BE DONE WITH RECURSIVE PURE FUNCTIONS? http://dpaste.dzfl.pl/72837a7a
 
-        template MapTuple(int I, int J, int K, TL...) {
+        template MapTuple(int I, int J, int K) {
 
-            static if (TL.length == 0) {
-                const char[] MapTuple = ")";
+            static if (I < 0) {
+                const char[] MapTuple = "";
                 
-            } else static if (J >= 0 && is(DIMS[J] == TL[TL.length - 1])) {
-                const char[] MapTuple = MapTuple!(I-1, J, K, TL[0 .. TL.length - 1]);
+            } else static if (J >= 0 && is(DIMS[J] == T[I])) {
+                const char[] MapTuple = MapTuple!(I-1, J-1, K);
             } else {
                 static if (K > 0) {
-                    const char[] MapTuple =  MapTuple!(I-1, J-1, K+1, TL[0 .. TL.length - 1]) ~ ", entry["~I~"]";
+                    const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ ", entry["~to!string(I)~"]";
                 } else {
-                    const char[] MapTuple =  MapTuple!(I-1, J-1, K+1, TL[0 .. TL.length - 1]) ~ "Tuple!(entry["~I~"]";
+                    const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "entry["~to!string(I)~"]";
                 }
                 
             }
 
         }
-        
+
         // NO, you have one chance to define the tuple at runtime.
         
         foreach (entry ; storage) {
@@ -840,7 +840,7 @@ class set(T ...) {
             }
 */            
             
-            newElements [ mixin(MapTuple!(T.length - 1, DIMS.length - 1, 0, T) ) ] = true;
+            newElements [ mixin("tuple(" ~ MapTuple!(T.length - 1, DIMS.length - 1, 0) ~ ")" ) ] = true;
         }
 
         
@@ -962,11 +962,16 @@ unittest {
 
     testObjSet finalSet = new testObjSet( newSet.orth_project!(testObj)() );
 
-        
-    assert(newSet.size() == size * size, "Set size is incorrect");
 
-    foreach (obj ; newSet) {
-        assert(newSet.contains(obj));
+    assert(finalSet.size() == size, "Set size is incorrect");
+
+    int counter = 0;
+    int sum = 0;
+    foreach( obj ; finalSet) {
+        sum += obj[0].a;
+        counter ++;
     }
+    assert (counter == size, "Set foreach did not go over all entries");
+    assert (sum == 45, "Set foreach did not go over all entries");
 }
 
