@@ -796,25 +796,22 @@ class set(T ...) {
 
 
 
-        template editTuple(FIRST, REMAIN ...) {
-            static if (REMAIN.length == 0) {
-                
-            } else {
+        // MAYBE THIS COULD BE DONE WITH RECURSIVE PURE FUNCTIONS? http://dpaste.dzfl.pl/72837a7a
 
-            }            
-        }
-
-
-        template MapTuple(I, DIMS, NEXT, TL...) {
+        template MapTuple(int I, int J, int K, TL...) {
 
             static if (TL.length == 0) {
-                alias "" MapTuple;
+                const char[] MapTuple = ")";
                 
-            } else static if ( is(DIMS[0] == NEXT)) {
-                
-                alias "entry["~I~"], " ~ MapTuple!(I+1, DIMS[1..length], TL) MapTuple;
+            } else static if (J >= 0 && is(DIMS[J] == TL[TL.length - 1])) {
+                const char[] MapTuple = MapTuple!(I-1, J, K, TL[0 .. TL.length - 1]);
             } else {
-                alias MapTuple!(I+1, DIMS, TL) MapTuple;
+                static if (K > 0) {
+                    const char[] MapTuple =  MapTuple!(I-1, J-1, K+1, TL[0 .. TL.length - 1]) ~ ", entry["~I~"]";
+                } else {
+                    const char[] MapTuple =  MapTuple!(I-1, J-1, K+1, TL[0 .. TL.length - 1]) ~ "Tuple!(entry["~I~"]";
+                }
+                
             }
 
         }
@@ -823,12 +820,12 @@ class set(T ...) {
         
         foreach (entry ; storage) {
 
-            auto reduced_entry = entry.reverse ;
+//            auto reduced_entry = entry.reverse ;
 
             // generate lines of code to remove fields from reduced_entry
 
-            alias REDUCED_DIMS = Reverse!(T);
-            
+  //          alias REDUCED_DIMS = Reverse!(T);
+/*            
             static foreach(i, p ; DIMS) {
 
                 static if (staticIndexOf!( p, REDUCED_DIMS) == 0) {
@@ -841,9 +838,9 @@ class set(T ...) {
                 REDUCED_DIMS = Erase!( p, REDUCED_DIMS );
 
             }
+*/            
             
-            
-            newElements [ reduced_entry.reverse ] = true;
+            newElements [ mixin(MapTuple!(T.length - 1, DIMS.length - 1, 0, T) ) ] = true;
         }
 
         
