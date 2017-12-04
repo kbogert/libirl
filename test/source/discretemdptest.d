@@ -261,11 +261,14 @@ unittest {
     
 }
 
+version(full) {
+
 @name("Distribution sampling") 
 unittest {
 
     int distSize = 500;
     int samples = 100000;
+
     double KLD = 0.0035;
 
     for (int k = 0; k < 100; k ++) {
@@ -302,6 +305,8 @@ unittest {
 
 
     
+}
+
 }
 
 
@@ -403,18 +408,18 @@ unittest {
 
 
 
-// Function and space experimenting
+// Function and set experimenting
 import std.traits;
 
 class func(RETURN_TYPE, PARAM ...) {
 
     RETURN_TYPE [PARAM] storage;
-    space!PARAM mySpace;
+    set!PARAM mySet;
 
     RETURN_TYPE funct_default;
 
-    public this(space!PARAM s, RETURN_TYPE def) {
-        mySpace = s;
+    public this(set!PARAM s, RETURN_TYPE def) {
+        mySet = s;
         funct_default = def;
     }
 
@@ -425,16 +430,16 @@ class func(RETURN_TYPE, PARAM ...) {
         if (p !is null) {
             return *p;
         }
-        if ( mySpace !is null && ! mySpace.contains(i)) {
-            throw new Exception("ERROR, key is not in the space this function is defined over.");
+        if ( mySet !is null && ! mySet.contains(i)) {
+            throw new Exception("ERROR, key is not in the set this function is defined over.");
         }
         return funct_default;
     }
 
 
     void opIndexAssign(RETURN_TYPE value, PARAM i) {
-          if ( mySpace !is null && ! mySpace.contains(i)) {
-               throw new Exception("ERROR, key is not in the space this function is defined over.");
+          if ( mySet !is null && ! mySet.contains(i)) {
+               throw new Exception("ERROR, key is not in the set this function is defined over.");
           }
           storage[i] = value;
     }
@@ -445,8 +450,8 @@ class func(RETURN_TYPE, PARAM ...) {
         RETURN_TYPE* p;
         p = (key in storage);
         if (p is null) {
-            if ( mySpace !is null && ! mySpace.contains(key)) {
-                throw new Exception("ERROR, key is not in the space this distribution is defined over.");
+            if ( mySet !is null && ! mySet.contains(key)) {
+                throw new Exception("ERROR, key is not in the set this distribution is defined over.");
             }
             storage[key] = funct_def;
             p = (key in myDistribution);
@@ -475,7 +480,7 @@ class func(RETURN_TYPE, PARAM ...) {
             RETURN_TYPE max;
             bool setMax = false;
         
-            foreach (key ; mySpace) {
+            foreach (key ; mySet) {
 
                 RETURN_TYPE val = storage[key];
             
@@ -499,7 +504,7 @@ class func(RETURN_TYPE, PARAM ...) {
             Tuple!(PARAM) max_param;
             bool setMax = false;
         
-            foreach (key ; mySpace) {
+            foreach (key ; mySet) {
 
                 RETURN_TYPE val = storage[key];
             
@@ -529,20 +534,20 @@ class func(RETURN_TYPE, PARAM ...) {
 
 
         func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() 
-            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSpace, TOREMOVE))
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
-            auto newSpace = mySpace.orth_project!(SUBPARAM)();
+            auto newSet = mySet.orth_project!(SUBPARAM)();
         
-            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSpace);
+            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSet);
 
-            foreach (key ; newSpace) {
+            foreach (key ; newSet) {
 
                 RETURN_TYPE max;
                 bool setMax = false;
 
-                foreach( subkey ; mySpace.remove_dim_front!(SUBPARAM)() ) {
+                foreach( subkey ; mySet.remove_dim_front!(SUBPARAM)() ) {
 
                     auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                     RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -573,22 +578,22 @@ class func(RETURN_TYPE, PARAM ...) {
         }
         
         func!(Tuple!(TOREMOVE), removeLast(TOREMOVE) ) argmax(TOREMOVE...)() 
-            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSpace, TOREMOVE))
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
 
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
-            auto newSpace = mySpace.orth_project!(SUBPARAM)();
+            auto newSet = mySet.orth_project!(SUBPARAM)();
         
-            auto returnval = new func!(Tuple!(TOREMOVE),SUBPARAM)(newSpace);
+            auto returnval = new func!(Tuple!(TOREMOVE),SUBPARAM)(newSet);
 
-            foreach (key ; newSpace) {
+            foreach (key ; newSet) {
 
                 RETURN_TYPE max;
                 Tuple!(TOREMOVE) max_key;
                 bool setMax = false;
 
-                foreach( subkey ; mySpace.remove_dim_front!(SUBPARAM)() ) {
+                foreach( subkey ; mySet.remove_dim_front!(SUBPARAM)() ) {
 
                     auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                     RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -625,8 +630,8 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
     
-    protected template dimOfSpace(DIM) {
-        enum dimOfSpace = (staticIndexOf!(DIM, PARAM) != -1);
+    protected template dimOfSet(DIM) {
+        enum dimOfSet = (staticIndexOf!(DIM, PARAM) != -1);
     }    
 }
 
@@ -635,51 +640,13 @@ class func(RETURN_TYPE, PARAM ...) {
 
 
 import std.typetuple;
-
-class space(T ...) {
-
-    abstract public size_t size();
-    abstract public bool contains(Tuple!(T) i);
-    abstract int opApply(int delegate(ref Tuple!(T)) dg);
-    abstract space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
-        if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) ;
-
-    abstract space!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
-        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) ;
-        
-    abstract space!( removeLast(DIMS) ) remove_dim_back(DIMS...)()
-        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) ;
-
-    abstract space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a);
-
-    protected template dimOfSpace(DIM) {
-        enum dimOfSpace = (staticIndexOf!(DIM, T) != -1);
-    }
-
-    protected template removeLast(FIRST, REMAIN ...) {
-        static if (REMAIN.length > 0) {
-            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast( REMAIN ) )));
-        } else {
-            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(T) ));
-        }
-    }
-
-    protected template removeFirst(FIRST, REMAIN ...) {
-        static if (REMAIN.length > 0) {
-            auto removeFirst = Erase!(FIRST, removeFirst( REMAIN ) );
-        } else {
-            auto removeFirst = Erase!(FIRST, T);
-        }
-    }
-}
-
 import std.typecons;
 
-// now create some spaces, 1D, 2D, 3D
+// now create some sets, 1D, 2D, 3D
 
 
-// could be optimized for 1D spaces by removing the tuples, if I feel like it I guess
-class space_impl(T ...) : space!(T) {
+// could be optimized for 1D sets by removing the tuples, if I feel like it I guess
+class set(T ...) {
 
     Tuple!(T) [] storage;
 
@@ -688,18 +655,18 @@ class space_impl(T ...) : space!(T) {
         storage = elements;
     }
     
-    override public size_t size() {
+    public size_t size() {
         return storage.length;
     }
     
-    override public bool contains(Tuple!(T) i) {
+    public bool contains(Tuple!(T) i) {
          foreach( a ; storage) 
              if (a == i)
                  return true;
          return false;
     }
 
-    override int opApply(int delegate(ref Tuple!(T)) dg) {
+    int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {
                result = dg(value);
@@ -709,14 +676,14 @@ class space_impl(T ...) : space!(T) {
           return result;
     }
     
-    override space!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
-        if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSpace, PROJECTED_DIMS)) 
+    set!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
+        if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSet, PROJECTED_DIMS)) 
     {
-        return remove_dim_back( removeFirst(PROJECTED_DIMS) )();
+        return remove_dim_back!( removeFirst!(PROJECTED_DIMS) )();
     }
 
-    override space!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
-        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) 
+    set!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS)) 
     {
 
         alias NEWDIMS = removeFirst!(DIMS);
@@ -784,12 +751,12 @@ class space_impl(T ...) : space!(T) {
 
         
 
-        return new space!(NEWDIMS)(newElements.keys);
+        return new set!(NEWDIMS)(newElements.keys);
         
     }
 
-    override space!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
-        if (DIMS.length > 0 && allSatisfy!(dimOfSpace, DIMS)) 
+    set!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
+        if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS)) 
     {
 
         alias NEWDIMS = removeLast!(DIMS);
@@ -827,8 +794,32 @@ class space_impl(T ...) : space!(T) {
             
         }*/
 
-        // wait, shit should I do this at runtime?  I can build tuples from others, so I just do this one at a time!
-        // inside this foreach, a static foreach to generate the appropriate tuple = tuple!(tuple, entry[i])
+
+
+        template editTuple(FIRST, REMAIN ...) {
+            static if (REMAIN.length == 0) {
+                
+            } else {
+
+            }            
+        }
+
+
+        template MapTuple(I, DIMS, NEXT, TL...) {
+
+            static if (TL.length == 0) {
+                alias "" MapTuple;
+                
+            } else static if ( is(DIMS[0] == NEXT)) {
+                
+                alias "entry["~I~"], " ~ MapTuple!(I+1, DIMS[1..length], TL) MapTuple;
+            } else {
+                alias MapTuple!(I+1, DIMS, TL) MapTuple;
+            }
+
+        }
+        
+        // NO, you have one chance to define the tuple at runtime.
         
         foreach (entry ; storage) {
 
@@ -836,7 +827,7 @@ class space_impl(T ...) : space!(T) {
 
             // generate lines of code to remove fields from reduced_entry
 
-            auto REDUCED_DIMS = REVERSE!(T);
+            alias REDUCED_DIMS = Reverse!(T);
             
             static foreach(i, p ; DIMS) {
 
@@ -857,27 +848,128 @@ class space_impl(T ...) : space!(T) {
 
         
 
-        return new space!(NEWDIMS)(newElements.keys);
+        return new set!(NEWDIMS)(newElements.keys);
     }
 
 
-    override space!( AliasSeq!(T, A) ) cartesian_product(A) (space!(A) a) {
+    set!( AliasSeq!(T, A) ) cartesian_product(A) (set!(A) a) {
 
         alias NEWDIMS = AliasSeq!(T, A);
 
         Tuple!(NEWDIMS) [] newElements;  // TODO: Optimise this, we know how big this array should be
 
-        foreach (mine; storage) {
+        foreach (Tuple!(T) mine; storage) {
 
-            foreach (yours; a) {
+            foreach (Tuple!(A) yours; a) {
 
-                newElements ~= Tuple!(mine, yours);
+                newElements ~= tuple(mine[], yours[]);
             }
         }
 
-        return new space!(NEWDIMS)(newElements);
+        return new set!(NEWDIMS)(newElements);
     }
 
 
+    
+    protected template dimOfSet(DIM) {
+        enum dimOfSet = (staticIndexOf!(DIM, T) != -1);
+    }
+
+    protected template removeLast(FIRST, REMAIN ...) {
+        static if (REMAIN.length > 0) {
+            alias removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast!( REMAIN ) )));
+        } else {
+            alias removeLast = Reverse!(Erase!(FIRST, Reverse!(T) ));
+        }
+    }
+
+    protected template removeFirst(FIRST, REMAIN ...) {
+        static if (REMAIN.length > 0) {    
+            alias removeFirst = Erase!(FIRST, removeFirst!( REMAIN ) );
+        } else {
+            alias removeFirst = Erase!(FIRST, T);
+        }
+    }
 } 
+
+
+
+class testObjSet : set!(testObj) {
+
+    public this(int size) {
+        Tuple!(testObj) [] tempArr;
+        for (int i = 0; i < size; i ++)
+            tempArr ~= tuple(new testObj(i));
+
+        super(tempArr);
+    }
+
+    public this(set!(testObj) toCopy) {
+        super(toCopy.storage.dup);
+    }
+}
+
+import std.stdio;
+
+@name("Set Create and foreach")
+unittest {
+
+    int size = 10;
+    
+    
+    testObjSet testSet = new testObjSet(size);
+
+    assert(testSet.size() == size, "Set size is incorrect");
+
+    int counter = 0;
+    int sum = 0;
+    foreach( obj ; testSet) {
+        sum += obj[0].a;
+        counter ++;
+    }
+    assert (counter == size, "Set foreach did not go over all entries");
+    assert (sum == 45, "Set foreach did not go over all entries");
+    
+}
+
+
+@name("Set Cartesian product")
+unittest {
+
+    int size = 10;
+    
+    
+    testObjSet testSet = new testObjSet(size);
+
+
+    set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
+    
+    assert(newSet.size() == size * size, "Set size is incorrect");
+
+    foreach (obj ; newSet) {
+        assert(newSet.contains(obj));
+    }
+}
+
+@name("Set projection")
+unittest {
+
+    int size = 10;
+    
+    
+    testObjSet testSet = new testObjSet(size);
+
+
+    set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
+
+
+    testObjSet finalSet = new testObjSet( newSet.orth_project!(testObj)() );
+
+        
+    assert(newSet.size() == size * size, "Set size is incorrect");
+
+    foreach (obj ; newSet) {
+        assert(newSet.contains(obj));
+    }
+}
 
