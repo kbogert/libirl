@@ -807,7 +807,7 @@ class set(T ...) {
                 const char[] MapTuple = MapTuple!(I-1, J-1, K);
             } else {
                 static if (K > 0) {
-                    const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ ", entry["~to!string(I)~"]";
+                    const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "entry["~to!string(I)~"], ";
                 } else {
                     const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "entry["~to!string(I)~"]";
                 }
@@ -946,6 +946,11 @@ unittest {
     foreach (obj ; newSet) {
         assert(newSet.contains(obj));
     }
+
+    set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
+
+    assert(bigSet.size() == size * size * size, "Set size is incorrect");
+    
 }
 
 @name("Set projection")
@@ -959,6 +964,7 @@ unittest {
 
     set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
 
+    set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
 
     testObjSet finalSet = new testObjSet( newSet.orth_project!(testObj)() );
 
@@ -973,6 +979,15 @@ unittest {
     }
     assert (counter == size, "Set foreach did not go over all entries");
     assert (sum == 45, "Set foreach did not go over all entries");
+
+    finalSet = new testObjSet( bigSet.orth_project!(testObj)() );
+
+    assert(finalSet.size() == size, "Set size is incorrect");
+
+    newSet = bigSet.orth_project!(testObj, testObj)();
+
+    assert(newSet.size() == size * size, "Set size is incorrect");
+
 }
 
 @name("Correct Dimension Removed")
