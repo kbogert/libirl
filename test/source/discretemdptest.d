@@ -66,6 +66,35 @@ class testObjSpace : Space!(testObj) {
 
 }
 
+class testObj2 {
+
+    int a;
+
+    public this() {
+        a = 0;
+    }
+    public this(int b) {
+        a = b;
+    }
+
+    override bool opEquals(Object o) {
+          auto rhs = cast(testObj2)o;
+          if (!rhs) return false;
+
+          return a == rhs.a;
+     }
+
+     override size_t toHash() @trusted nothrow {
+          return a;
+     }
+
+     override string toString() {
+          return to!string(a);
+     }   
+}
+
+
+
 @name("Distribution Create and foreach")
 unittest {
 
@@ -690,63 +719,28 @@ class set(T ...) {
         
         bool [Tuple!(NEWDIMS)] newElements;
 
-        // go through storage, only adding unique tuples to newElements
-        // this is harder than it needs to be, really would be easy with multi-dimensional arrays
-        // or, statically figuring out the parameter ordering
 
-       // string entry_mapping = "";
+        template MapTuple(int I, int J, int K) {
 
-        // what I want to do here is map from T to PROJECTED_DIMS.  I can do this by mapping each T entry to a number     
-
-        // this won't work, logic is all wrong
-        
-  /*      int added = 0;
-        //maybe a recursive function?
-        static foreach(i, p ; PROJECTED_DIMS) {
-
-            PROJECT_DIMS_OUTER:
-            static foreach(j ; i .. T.length) {
-
-                static if (typeid(p) == typeid(T[j])) {
-                    
-                    if (added > 0) {
-                        entry_mapping ~= ",";
-                    }
-            
-                    entry_mapping ~= "entry[" ~ i ~ "]";
-                    added = added + 1;
-                    break PROJECT_DIMS_OUTER;
-                }    
+            static if (I >= T.length) {
+                const char[] MapTuple = "";
+                
+            } else static if (J < DIMS.length && is(DIMS[J] == T[I])) {
+                const char[] MapTuple = MapTuple!(I+1, J+1, K);
+            } else {
+                static if (K > 0) {
+                    const char[] MapTuple =  ", entry["~to!string(I)~"]" ~ MapTuple!(I+1, J, K+1);
+                } else {
+                    const char[] MapTuple =  "entry["~to!string(I)~"]" ~ MapTuple!(I+1, J, K+1);
+                }
+                
             }
-            
-        }*/
 
-        // wait, shit should I do this at runtime?  I can build tuples from others, so I just do this one at a time!
-        // inside this foreach, a static foreach to generate the appropriate tuple = tuple!(tuple, entry[i])
+        }        
         
         foreach (entry ; storage) {
-
-            auto reduced_entry = entry;
-
-            // generate lines of code to remove fields from reduced_entry
-
-            auto REDUCED_DIMS = Reverse!(Reverse!(T));
             
-            static foreach(i, p ; DIMS) {
-
-                static if (staticIndexOf!( p, REDUCED_DIMS) == 0) {
-                    reduced_entry = reduced_entry[1 .. $];
-
-                } else {
-                    reduced_entry = Tuple!(reduced_entry[0 .. staticIndexOf!( p, REDUCED_DIMS )] , reduced_entry[staticIndexOf!( p, REDUCED_DIMS ) + 1 .. $] );
-                }
-
-                REDUCED_DIMS = Erase!( p, REDUCED_DIMS );
-
-            }
-            
-            
-            newElements [ reduced_entry ] = true;
+            newElements [ mixin("tuple(" ~ MapTuple!(0, 0, 0) ~ ")" ) ] = true;
         }
 
         
@@ -906,6 +900,22 @@ class testObjSet : set!(testObj) {
     }
 }
 
+
+class testObj2Set : set!(testObj2) {
+
+    public this(int size) {
+        Tuple!(testObj2) [] tempArr;
+        for (int i = 0; i < size; i ++)
+            tempArr ~= tuple(new testObj2(i));
+
+        super(tempArr);
+    }
+
+    public this(set!(testObj2) toCopy) {
+        super(toCopy.storage.dup);
+    }
+}
+
 import std.stdio;
 
 @name("Set Create and foreach")
@@ -993,5 +1003,48 @@ unittest {
 @name("Correct Dimension Removed")
 unittest {
 
+    int size = 10;
+    int size2 = 5;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+    testObj2Set testSet2 = new testObj2Set(size2);
     
+
+    set!(testObj, testObj2, testObj) bigset = testSet1.cartesian_product(testSet2).cartesian_product(testSet1);
+
+    
+    // back
+    
+    set!(testObj, testObj2) attempt1 = bigset.orth_project!(testObj, testObj2)();
+
+    assert(attempt1.size() == size * size2, "Set size is incorrect");
+    
+    attempt1 = bigset.remove_dim_back!(testObj)();    
+
+    assert(attempt1.size() == size * size2, "Set size is incorrect");
+    
+    set!(testObj, testObj) attempt2  = bigset.remove_dim_back!(testObj2)();
+
+    assert(attempt2.size() == size * size, "Set size is incorrect");
+
+    set!(testObj) attempt3 = bigset.remove_dim_back!(testObj2, testObj)();
+    
+
+    // front
+
+       
+    set!(testObj2, testObj) attempt4 = bigset.remove_dim_front!(testObj)();    
+
+    assert(attempt4.size() == size * size2, "Set size is incorrect");
+    
+    set!(testObj, testObj) attempt5  = bigset.remove_dim_front!(testObj2)();
+
+    assert(attempt5.size() == size * size, "Set size is incorrect");
+
+    set!(testObj) attempt6 = bigset.remove_dim_front!(testObj, testObj2)();
+
+    attempt6 = bigset.remove_dim_front!(testObj2, testObj)();
+    
+        
 }
