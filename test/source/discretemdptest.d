@@ -455,8 +455,17 @@ class func(RETURN_TYPE, PARAM ...) {
     public this(set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr) {
         mySet = s;
         storage = arr;
+        foreach(key ; mySet) {
+            funct_default = arr[key];
+            break;
+        }
     }
 
+    public this(set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr, RETURN_TYPE def) {
+        mySet = s;
+        storage = arr;
+        funct_default = def;  
+    }
     
     RETURN_TYPE opIndex(Tuple!(PARAM) i ) {
         RETURN_TYPE* p;
@@ -546,7 +555,7 @@ class func(RETURN_TYPE, PARAM ...) {
         
             foreach (key ; mySet) {
 
-                RETURN_TYPE val = storage[key];
+                RETURN_TYPE val = storage.get(key, funct_default);
             
                 if (! setMax ) {
                     max = val;
@@ -570,7 +579,7 @@ class func(RETURN_TYPE, PARAM ...) {
         
             foreach (key ; mySet) {
 
-                RETURN_TYPE val = storage[key];
+                RETURN_TYPE val = storage.get(key, funct_default);
             
                 if (! setMax ) {
                     max = val;
@@ -586,6 +595,21 @@ class func(RETURN_TYPE, PARAM ...) {
             }
 
             return max_param;
+        }
+
+        RETURN_TYPE sumout()() 
+            if (isNumeric!(RETURN_TYPE))
+        {
+       
+            RETURN_TYPE sum = 0;
+        
+            foreach (key ; mySet) {
+
+                sum += storage.get(key, funct_default);
+            }
+
+            return sum;
+
         }
         
     } else {
@@ -626,7 +650,9 @@ class func(RETURN_TYPE, PARAM ...) {
             }        
               
 
-            foreach(combinedkey, val ; storage) {
+            foreach(combinedkey ; mySet) {
+ 
+                RETURN_TYPE val = storage.get(combinedkey, funct_default);
 
                 auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
 
@@ -647,7 +673,7 @@ class func(RETURN_TYPE, PARAM ...) {
             
         }
 
-        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 2] ) argmax()() {
+        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 1] ) argmax()() {
 
             return argmax!(PARAM[PARAM.length - 1])();
 
@@ -660,42 +686,147 @@ class func(RETURN_TYPE, PARAM ...) {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
             auto newSet = mySet.orth_project!(SUBPARAM)();
-            auto subSet = mySet.remove_dim_front!(SUBPARAM)();
+
+            RETURN_TYPE [Tuple!(SUBPARAM)] max;
+            Tuple!(TOREMOVE) [Tuple!(SUBPARAM)] max_key;
+            
         
-            auto returnval = new func!(Tuple!(TOREMOVE),SUBPARAM)(newSet);
+            template MapTuple(int I, int J, int K) {
 
-            foreach (key ; newSet) {
-
-                RETURN_TYPE max;
-                Tuple!(TOREMOVE) max_key;
-                bool setMax = false;
-
-                foreach( subkey ; subset ) {
-
-                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
-                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                static if (I < 0) {
+                    const char[] MapTuple = "";
                 
-                    if (! setMax ) {
-                        max = val;
-                        max_key = subkey;
-                        setMax = true;
+                } else static if (J >= 0 && is(TOREMOVE[J] == PARAM[I])) {
+                    const char[] MapTuple = MapTuple!(I-1, J-1, K);
+                } else {
+                    static if (K > 0) {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"], ";
                     } else {
-                        if (val > max) {
-                            max = val;
-                            max_key = subkey;
-                        }
-                    }                
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"]";
+                    }
                 
                 }
 
-                returnval[key] = max_key;   
+            } 
+
+            template MapTuplePositive(int I, int J, int K) {
+
+                static if (I < 0) {
+                    const char[] MapTuplePositive = "";
+                
+                } else static if (J >= 0 && is(SUBPARAM[J] == PARAM[I])) {
+                    static if (K > 0) {
+                        const char[] MapTuplePositive =  MapTuplePositive!(I-1, J-1, K+1) ~ "combinedkey["~to!string(I)~"], ";
+                    } else {
+                        const char[] MapTuplePositive =  MapTuplePositive!(I-1, J-1, K+1) ~ "combinedkey["~to!string(I)~"]";
+                    }
+                } else {
+
+                    const char[] MapTuplePositive = MapTuplePositive!(I-1, J, K);
+                                
+                }
+
+            }             
+            foreach(combinedkey ; mySet) {
+
+                RETURN_TYPE val = storage.get(combinedkey, funct_default);
+                
+                auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
+                auto return_key = mixin( "tuple(" ~ MapTuplePositive!(PARAM.length - 1, SUBPARAM.length - 1, 0) ~ ")" );
+
+                RETURN_TYPE* p;
+                p = (key in max);
+                if (p is null) {
+                    max[key] = val;
+                    max_key[key] = return_key;
+                } else {
+                    if (val > *p) {
+                        *p = val;
+                        max_key[key] = return_key;
+                    }
+                }
+
+                
             }
 
-            return returnval;
+            return new func!(Tuple!(TOREMOVE),SUBPARAM)(newSet, max_key);
         }
+
+
         
+        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) sumout()() 
+            if (isNumeric!(RETURN_TYPE))
+        {
+
+            return sumout!(PARAM[PARAM.length - 1])();
+
+        }
+
+
+        func!(RETURN_TYPE, removeLast!(TOREMOVE) ) sumout(TOREMOVE...)() 
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE) && isNumeric!(RETURN_TYPE))
+        {
+            alias SUBPARAM = removeLast!(TOREMOVE);
+
+            auto newSet = mySet.orth_project!(SUBPARAM)();
+        
+            RETURN_TYPE [Tuple!(SUBPARAM)] sum;
+
+
+            template MapTuple(int I, int J, int K) {
+
+                static if (I < 0) {
+                    const char[] MapTuple = "";
+                
+                } else static if (J >= 0 && is(TOREMOVE[J] == PARAM[I])) {
+                    const char[] MapTuple = MapTuple!(I-1, J-1, K);
+                } else {
+                    static if (K > 0) {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"], ";
+                    } else {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"]";
+                    }
+                
+                }
+
+            }        
+              
+
+            foreach(combinedkey ; mySet) {
+
+                RETURN_TYPE val = storage.get(combinedkey, funct_default);
+                
+                auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
+
+                RETURN_TYPE* p;
+                p = (key in sum);
+                if (p is null) {
+                    sum[key] = val;
+                } else {
+                    *p += val;
+                }
+                
+            }
+            
+
+            return new func!(RETURN_TYPE,SUBPARAM)(newSet, sum);
+            
+        }                
     }
 
+
+    override string toString() {
+
+        string returnval = "";
+
+        foreach (key ; mySet) {
+            auto val = storage.get(key, funct_default);
+
+            returnval ~= to!string(key) ~ " => " ~ to!string(val) ~ ", ";
+        }
+        
+        return returnval;
+    }
 
     
     protected template removeLast(FIRST, T ...) {
@@ -1070,8 +1201,31 @@ unittest {
 
         testFunc2[key] = key[0].a + key[1].a;
     }
+}
+
+@name("Function max and argmax")
+unittest {
+    int size = 10;
 
 
+    testObjSet testSet1 = new testObjSet(size);
+
+    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+
+    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+
+    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+
+    foreach (key ; testSet1) {
+
+        testFunc[key] = key[0].a;
+    }
+
+
+    foreach (key ; testSet2) {
+
+        testFunc2[key] = key[0].a + key[1].a;
+    }
     assert(testFunc.max() == 9, "Max did not work");
 
     assert(testFunc2.max().max() == 18, "Max did not work");
@@ -1081,6 +1235,56 @@ unittest {
     foreach (key; max1.param_set()) {
         assert(max1[key] == key[0].a + 9, "Something is wrong with the max calculation");
     }
+
+
+    func!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
+
+    foreach (key; testArgMax.param_set()) {
+
+        assert(testArgMax[key][0].a == 9, "ArgMax didn't work right");
+    }
     
+    testArgMax = testFunc2.argmax!(testObj)();
+
+    foreach (key; testArgMax.param_set()) {
+
+        assert(testArgMax[key][0].a == 9, "ArgMax didn't work right");
+    }
+
+    assert(testFunc2.argmax().argmax()[0].a >= 0 , "Argmax didn't work right");
        
+}
+
+
+@name("Function sumout")
+unittest {
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+
+    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+
+    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+
+    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+
+    foreach (key ; testSet1) {
+
+        testFunc[key] = key[0].a;
+    }
+
+
+    foreach (key ; testSet2) {
+
+        testFunc2[key] = key[0].a + key[1].a;
+    }
+    assert(testFunc.sumout() == 45, "Sumout did not work");
+
+    auto sum = testFunc2.sumout();
+
+    foreach (key ; sum.param_set()) {
+        assert( sum[key] == (key[0].a * 10) + 45, "Sumout not correct for each element" );
+    }    
+    assert(testFunc2.sumout().sumout() == 900, "Sumout did not work 2");
 }
