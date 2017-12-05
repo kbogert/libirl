@@ -757,41 +757,6 @@ class set(T ...) {
         
         bool [Tuple!(NEWDIMS)] newElements;
 
-        // go through storage, only adding unique tuples to newElements
-        // this is harder than it needs to be, really would be easy with multi-dimensional arrays
-        // or, statically figuring out the parameter ordering
-
-       // string entry_mapping = "";
-
-        // what I want to do here is map from T to PROJECTED_DIMS.  I can do this by mapping each T entry to a number     
-
-        // this won't work, logic is all wrong
-        
-  /*      int added = 0;
-        //maybe a recursive function?
-        static foreach(i, p ; PROJECTED_DIMS) {
-
-            PROJECT_DIMS_OUTER:
-            static foreach(j ; i .. T.length) {
-
-                static if (typeid(p) == typeid(T[j])) {
-                    
-                    if (added > 0) {
-                        entry_mapping ~= ",";
-                    }
-            
-                    entry_mapping ~= "entry[" ~ i ~ "]";
-                    added = added + 1;
-                    break PROJECT_DIMS_OUTER;
-                }    
-            }
-            
-        }*/
-
-
-
-        // MAYBE THIS COULD BE DONE WITH RECURSIVE PURE FUNCTIONS? http://dpaste.dzfl.pl/72837a7a
-
         template MapTuple(int I, int J, int K) {
 
             static if (I < 0) {
@@ -810,30 +775,8 @@ class set(T ...) {
 
         }
 
-        // NO, you have one chance to define the tuple at runtime.
-        
         foreach (entry ; storage) {
 
-//            auto reduced_entry = entry.reverse ;
-
-            // generate lines of code to remove fields from reduced_entry
-
-  //          alias REDUCED_DIMS = Reverse!(T);
-/*            
-            static foreach(i, p ; DIMS) {
-
-                static if (staticIndexOf!( p, REDUCED_DIMS) == 0) {
-                    reduced_entry = reduced_entry[1 .. $];
-
-                } else {
-                    reduced_entry = Tuple!(reduced_entry[0 .. staticIndexOf!( p, REDUCED_DIMS )] , reduced_entry[staticIndexOf!( p, REDUCED_DIMS ) + 1 .. $] );
-                }
-
-                REDUCED_DIMS = Erase!( p, REDUCED_DIMS );
-
-            }
-*/            
-            
             newElements [ mixin("tuple(" ~ MapTuple!(T.length - 1, DIMS.length - 1, 0) ~ ")" ) ] = true;
         }
 
@@ -847,13 +790,18 @@ class set(T ...) {
 
         alias NEWDIMS = AliasSeq!(T, A);
 
-        Tuple!(NEWDIMS) [] newElements;  // TODO: Optimise this, we know how big this array should be
+        Tuple!(NEWDIMS) [] newElements;
 
+        newElements.length = storage.length * a.storage.length;
+
+        size_t i = 0;
+        
         foreach (Tuple!(T) mine; storage) {
 
             foreach (Tuple!(A) yours; a) {
 
-                newElements ~= tuple(mine[], yours[]);
+                newElements[i] = tuple(mine[], yours[]);
+                i ++;
             }
         }
 
