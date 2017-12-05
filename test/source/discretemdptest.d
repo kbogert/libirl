@@ -1277,14 +1277,14 @@ unittest {
 
     foreach (key ; testSet2) {
 
-        testFunc2[key] = key[0].a + key[1].a;
+        testFunc2[key] = key[1].a;
     }
     assert(testFunc.sumout() == 45, "Sumout did not work");
 
     auto sum = testFunc2.sumout();
 
     foreach (key ; sum.param_set()) {
-        assert( sum[key] == (key[0].a * 10) + 45, "Sumout not correct for each element" );
+        assert( sum[key] == 45, "Sumout not correct for each element" );
     }    
-    assert(testFunc2.sumout().sumout() == 900, "Sumout did not work 2");
+    assert(testFunc2.sumout().sumout() == 450, "Sumout did not work 2");
 }
