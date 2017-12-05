@@ -485,15 +485,19 @@ class func(RETURN_TYPE, PARAM ...) {
         p = (key in storage);
         if (p is null) {
             if ( mySet !is null && ! mySet.contains(key)) {
-                throw new Exception("ERROR, key is not in the set this distribution is defined over.");
+                throw new Exception("ERROR, key is not in the set this function is defined over.");
             }
             storage[key] = funct_def;
-            p = (key in myDistribution);
+            p = (key in storage);
         }
         mixin("*p " ~ op ~ "= rhs;");
     }    
-    
-    auto byKey() {
+
+    // These functions should probably stay removed, instead get the user to use the function's param set for looping:
+
+    // foreach (key ; func.param_set)
+    //      func[key] ... 
+/*    auto byKey() {
         return storage.byKey();
     }
 
@@ -505,6 +509,32 @@ class func(RETURN_TYPE, PARAM ...) {
         return storage.byKeyValue();
     }
 
+    public int opApply(scope int delegate(ref Tuple!(PARAM), ref RETURN_TYPE) dg) {
+        int result = 0;
+        foreach (key, value ; storage) {
+            result = dg(key, value);
+            if (result) break;
+
+        }
+        return result;
+    }*/
+    
+    /*
+    // I don't think this is needed, looping over just return values?
+    public int opApply(scope int delegate(ref RETURN_TYPE) dg) {
+        int result = 0;
+        foreach (value ; storage) {
+            result = dg(value);
+            if (result) break;
+
+        }
+        return result;
+    }
+    */
+
+    public set!(PARAM) param_set() {
+        return mySet;
+    }
 
     static if (PARAM.length == 1) {
         
@@ -713,7 +743,7 @@ class set(T ...) {
          return false;
     }
 
-    int opApply(int delegate(ref Tuple!(T)) dg) {
+    public int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {
                result = dg(value);
@@ -1045,6 +1075,12 @@ unittest {
     assert(testFunc.max() == 9, "Max did not work");
 
     assert(testFunc2.max().max() == 18, "Max did not work");
+
+    func!(double, testObj) max1 = testFunc2.max!(testObj)();
+
+    foreach (key; max1.param_set()) {
+        assert(max1[key] == key[0].a + 9, "Something is wrong with the max calculation");
+    }
     
        
 }
