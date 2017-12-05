@@ -442,7 +442,7 @@ import std.traits;
 
 class func(RETURN_TYPE, PARAM ...) {
 
-    RETURN_TYPE [PARAM] storage;
+    RETURN_TYPE [Tuple!(PARAM)] storage;
     set!PARAM mySet;
 
     RETURN_TYPE funct_default;
@@ -452,8 +452,13 @@ class func(RETURN_TYPE, PARAM ...) {
         funct_default = def;
     }
 
+    public this(set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr) {
+        mySet = s;
+        storage = arr;
+    }
+
     
-    RETURN_TYPE opIndex(PARAM i) {
+    RETURN_TYPE opIndex(Tuple!(PARAM) i ) {
         RETURN_TYPE* p;
         p = (i in storage);
         if (p !is null) {
@@ -466,7 +471,7 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
 
-    void opIndexAssign(RETURN_TYPE value, PARAM i) {
+    void opIndexAssign(RETURN_TYPE value, Tuple!(PARAM) i) {
           if ( mySet !is null && ! mySet.contains(i)) {
                throw new Exception("ERROR, key is not in the set this function is defined over.");
           }
@@ -475,7 +480,7 @@ class func(RETURN_TYPE, PARAM ...) {
 
 
     // FOR NUMERIC RETURN TYPES ONLY
-    void opIndexOpAssign(string op)(RETURN_TYPE rhs, T key) {
+    void opIndexOpAssign(string op)(RETURN_TYPE rhs, Tuple!(PARAM) key) {
         RETURN_TYPE* p;
         p = (key in storage);
         if (p is null) {
@@ -555,64 +560,77 @@ class func(RETURN_TYPE, PARAM ...) {
         
     } else {
         
-        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 2] ) max() {
+        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) max()() {
 
-            return max(PARAM[PARAM.length - 1])();
+            return max!(PARAM[PARAM.length - 1])();
 
         }
 
 
-        func!(RETURN_TYPE, removeLast(TOREMOVE) ) max(TOREMOVE...)() 
+        func!(RETURN_TYPE, removeLast!(TOREMOVE) ) max(TOREMOVE...)() 
             if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
             auto newSet = mySet.orth_project!(SUBPARAM)();
         
-            auto returnval = new func!(RETURN_TYPE,SUBPARAM)(newSet);
+            RETURN_TYPE [Tuple!(SUBPARAM)] max;
 
-            foreach (key ; newSet) {
 
-                RETURN_TYPE max;
-                bool setMax = false;
+            template MapTuple(int I, int J, int K) {
 
-                foreach( subkey ; mySet.remove_dim_front!(SUBPARAM)() ) {
-
-                    auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
-                    RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
+                static if (I < 0) {
+                    const char[] MapTuple = "";
                 
-                    if (! setMax ) {
-                        max = val;
-                        setMax = true;
+                } else static if (J >= 0 && is(TOREMOVE[J] == PARAM[I])) {
+                    const char[] MapTuple = MapTuple!(I-1, J-1, K);
+                } else {
+                    static if (K > 0) {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"], ";
                     } else {
-                        if (val > max) {
-                            max = val;
-                        }
-                    }                
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"]";
+                    }
                 
                 }
 
-                returnval[key] = max;   
+            }        
+              
+
+            foreach(combinedkey, val ; storage) {
+
+                auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
+
+                RETURN_TYPE* p;
+                p = (key in max);
+                if (p is null) {
+                    max[key] = val;
+                } else {
+                    if (val > *p) {
+                        *p = val;
+                    }
+                }
+                
             }
+            
 
-            return returnval;
-
+            return new func!(RETURN_TYPE,SUBPARAM)(newSet, max);
             
         }
 
-        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 2] ) argmax() {
+        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 2] ) argmax()() {
 
-            return argmax(PARAM[PARAM.length - 1])();
+            return argmax!(PARAM[PARAM.length - 1])();
 
         }
         
-        func!(Tuple!(TOREMOVE), removeLast(TOREMOVE) ) argmax(TOREMOVE...)() 
+        func!(Tuple!(TOREMOVE), removeLast!(TOREMOVE) ) argmax(TOREMOVE...)() 
             if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
 
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
 
             auto newSet = mySet.orth_project!(SUBPARAM)();
+            auto subSet = mySet.remove_dim_front!(SUBPARAM)();
         
             auto returnval = new func!(Tuple!(TOREMOVE),SUBPARAM)(newSet);
 
@@ -622,7 +640,7 @@ class func(RETURN_TYPE, PARAM ...) {
                 Tuple!(TOREMOVE) max_key;
                 bool setMax = false;
 
-                foreach( subkey ; mySet.remove_dim_front!(SUBPARAM)() ) {
+                foreach( subkey ; subset ) {
 
                     auto combinedKey = Tuple!( key , subkey );  // THIS MAYBE COULD BE AVOIDED WITH MIXINS, DEFINING THE ASSOCIATIVE ARRAY PER DIMENSION, AND THIS ALLOWS FOR PARTIAL ADDRESSING
                     RETURN_TYPE val = storage[ combinedKey ];           // BUT, ONLY IF THE LAST DIMENSION IS THE ONE MAXXED OVER, IF MORE THAN ONE THIS WOULDN'T WORK
@@ -652,9 +670,9 @@ class func(RETURN_TYPE, PARAM ...) {
     
     protected template removeLast(FIRST, T ...) {
         static if (T.length > 0) {
-            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
+            alias removeLast = Reverse!(Erase!(FIRST, Reverse!(  removeLast(T) )));
         } else {
-            auto removeLast = Reverse!(Erase!(FIRST, Reverse!(PARAM)));
+            alias removeLast = Reverse!(Erase!(FIRST, Reverse!(PARAM)));
         }
     }
 
@@ -995,4 +1013,38 @@ unittest {
     attempt6 = bigset.remove_dim_front!(testObj2, testObj)();
     
         
+}
+
+
+
+@name("Create function")
+unittest {
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+
+    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+
+    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+
+    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+
+    foreach (key ; testSet1) {
+
+        testFunc[key] = key[0].a;
+    }
+
+
+    foreach (key ; testSet2) {
+
+        testFunc2[key] = key[0].a + key[1].a;
+    }
+
+
+    assert(testFunc.max() == 9, "Max did not work");
+
+    assert(testFunc2.max().max() == 18, "Max did not work");
+    
+       
 }
