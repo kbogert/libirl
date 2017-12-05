@@ -811,7 +811,26 @@ class func(RETURN_TYPE, PARAM ...) {
 
             return new func!(RETURN_TYPE,SUBPARAM)(newSet, sum);
             
-        }                
+        }       
+
+
+        
+        func!(RETURN_TYPE, PARAM[0..PARAM.length - 1]) apply()(func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0..PARAM.length -1]) f)
+        {
+
+            RETURN_TYPE [ Tuple!(PARAM[0..PARAM.length -1]) ] chosen;
+
+            foreach( b_key ; f.param_set()) {
+
+                auto newKey = tuple(b_key[], f[b_key][0] );
+
+                chosen[b_key] = storage[newKey];
+
+            }
+
+            return new func!(RETURN_TYPE, PARAM[0..PARAM.length -1])(f.param_set(), chosen);        
+
+        }         
     }
 
 
@@ -1288,3 +1307,39 @@ unittest {
     }    
     assert(testFunc2.sumout().sumout() == 450, "Sumout did not work 2");
 }
+
+
+@name("Function apply")
+unittest {
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+
+    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+
+    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+
+    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+
+    foreach (key ; testSet1) {
+
+        testFunc[key] = key[0].a;
+    }
+
+    foreach (key ; testSet2) {
+
+        testFunc2[key] = key[1].a;
+    }
+
+    func!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
+
+    func!(double, testObj) testFunc3 = testFunc2.apply(testArgMax);
+
+    foreach(key ; testFunc3.param_set) {
+        assert(testFunc3[key] == 9, "Apply did not select correct items");
+    }
+
+    
+}
+
