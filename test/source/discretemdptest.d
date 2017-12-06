@@ -1083,11 +1083,12 @@ class set(T ...) {
         }
     }*/
 
+    // DIM[0] is index into T, don't know why I can't do it like above
     protected template dimOrderingCorrectForward(DIM...) {
         static if (DIM.length > 2 && is(DIM[1] == DIM[2])) {
-            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0]+1 .. T.length])+1 && dimOrderingCorrectForward!(DIM[0]+1, DIM[2..DIM.length]));
+            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0]+1 .. T.length])+1 && dimOrderingCorrectForward!(staticIndexOf!(DIM[1], T[DIM[0]..T.length])+1, DIM[2..DIM.length]));
         } else static if (DIM.length > 2) {
-            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0] .. T.length]) && dimOrderingCorrectForward!(DIM[0]+1, DIM[2..DIM.length]));
+            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0] .. T.length]) && dimOrderingCorrectForward!(staticIndexOf!(DIM[1], T[DIM[0]..T.length])+1, DIM[2..DIM.length]));
         } else {
             enum dimOrderingCorrectForward = staticIndexOf!(DIM[1], T[DIM[0]..T.length]) != -1;
         }
@@ -1099,9 +1100,9 @@ class set(T ...) {
 
     protected template dimOrderingCorrectBackward_(DIM...) {
         static if (DIM.length > 2 && is(DIM[1] == DIM[2])) {
-            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]+1..T.length])+1 && dimOrderingCorrectBackward_!(DIM[0]+1, DIM[2..DIM.length]));
+            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]+1..T.length])+1 && dimOrderingCorrectBackward_!(staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length])+1, DIM[2..DIM.length]));
         } else static if (DIM.length > 2) {
-            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]..T.length]) && dimOrderingCorrectBackward_!(DIM[0]+1, DIM[2..DIM.length]));
+            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]..T.length]) && dimOrderingCorrectBackward_!(staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length])+1, DIM[2..DIM.length]));
         } else {
             enum dimOrderingCorrectBackward_ = staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) != -1;
         }
