@@ -8,5 +8,11 @@
  "libirl": { "version" :"~master", "path": ".."}
 },
 "targetName": "libirl-test",
-"targetPath": "."
+"targetPath": ".",
+"targetType": "executable",
+"configurations": [
+	{ "name": "default"},
+	{ "name": "fullunittest",
+          "versions": ["default", "fullunittest"] }
+]
 }

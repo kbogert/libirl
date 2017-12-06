@@ -9,7 +9,7 @@ library:
 
 test:
   script:
-    - dub build --build=unittest --root=test
+    - dub build --build=unittest --root=test --config=fullunittest
     - test/libirl-test
   stage: test
   only:

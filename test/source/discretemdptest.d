@@ -290,7 +290,7 @@ unittest {
     
 }
 
-version(full) {
+version(fullunittest) {
 
 @name("Distribution sampling") 
 unittest {
