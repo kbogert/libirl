@@ -505,8 +505,9 @@ class func(RETURN_TYPE, PARAM ...) {
     }    
 
 
+    // operation with a same sized function (matrix op)
     func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM) other) 
-        if (op=="+"||op=="-"||op=="*"||op=="/")
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
         RETURN_TYPE [Tuple!(PARAM)] result;
@@ -519,8 +520,9 @@ class func(RETURN_TYPE, PARAM ...) {
         return new func!(RETURN_TYPE, PARAM)(mySet, result);
     }
 
+    // operation with a single param function (vector op)
     func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM[PARAM.length - 1]) other) 
-        if (PARAM.length > 1 && (op=="+"||op=="-"||op=="*"||op=="/"))
+        if (PARAM.length > 1 && (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/")))
     {
 
         RETURN_TYPE [Tuple!(PARAM)] result;
@@ -534,7 +536,28 @@ class func(RETURN_TYPE, PARAM ...) {
         return new func!(RETURN_TYPE, PARAM)(mySet, result);
     }
 
+    // operation with a single value (scalar op)
+    func!(RETURN_TYPE, PARAM) opBinary(string op)(RETURN_TYPE scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "scalar;");
+        }
+
+        
+        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+    }
     
+    func!(RETURN_TYPE, PARAM) opBinaryRight(string op)(RETURN_TYPE scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        return opBinary!(op)(scalar);
+    }
+        
     // These functions should probably stay removed, instead get the user to use the function's param set for looping:
 
     // foreach (key ; func.param_set)
@@ -863,7 +886,7 @@ class func(RETURN_TYPE, PARAM ...) {
 
             return new func!(RETURN_TYPE, PARAM[0..PARAM.length -1])(f.param_set(), chosen);        
 
-        }         
+        }
     }
 
 
@@ -1434,8 +1457,32 @@ unittest {
     foreach (key ; testSet2) {
 
         assert(result2[key] == key[1].a + key[1].a, "Assymetrical sum did not work right");
+    }
+
+        
+    result2 = testFunc2 + testFunc2;
+
+    foreach (key ; testSet2) {
+
+        assert(result2[key] == key[1].a + key[1].a, "Symetrical sum did not work right");
     }    
-            
+
+
+    // tests opBinary
+    result2 = testFunc2 * 0.5;
+    
+    foreach (key ; testSet2) {
+
+        assert(result2[key] == key[1].a * 0.5, "Scalar multiply did not work right");
+    }    
+
+    // tests opBinaryRight
+    result2 = 0.5 * testFunc2;
+    
+    foreach (key ; testSet2) {
+
+        assert(result2[key] == key[1].a * 0.5, "Scalar multiply did not work right");
+    }    
     
 }
     
