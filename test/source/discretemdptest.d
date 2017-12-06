@@ -489,19 +489,52 @@ class func(RETURN_TYPE, PARAM ...) {
 
 
     // FOR NUMERIC RETURN TYPES ONLY
-    void opIndexOpAssign(string op)(RETURN_TYPE rhs, Tuple!(PARAM) key) {
+    void opIndexOpAssign(string op)(RETURN_TYPE rhs, Tuple!(PARAM) key) 
+        if (isNumeric(RETURN_TYPE))
+    {
         RETURN_TYPE* p;
         p = (key in storage);
         if (p is null) {
             if ( mySet !is null && ! mySet.contains(key)) {
                 throw new Exception("ERROR, key is not in the set this function is defined over.");
             }
-            storage[key] = funct_def;
+            storage[key] = funct_default;
             p = (key in storage);
         }
         mixin("*p " ~ op ~ "= rhs;");
     }    
 
+
+    func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM) other) 
+        if (op=="+"||op=="-"||op=="*"||op=="/")
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[key];");
+        }
+
+        
+        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+
+    func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM[PARAM.length - 1]) other) 
+        if (PARAM.length > 1 && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            auto tempKey = tuple(key[key.length - 1]);
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+        }
+
+        
+        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+
+    
     // These functions should probably stay removed, instead get the user to use the function's param set for looping:
 
     // foreach (key ; func.param_set)
@@ -1343,3 +1376,66 @@ unittest {
     
 }
 
+@name("Function ops")
+unittest {
+
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+
+    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+
+        foreach (key ; testSet1) {
+
+        testFunc[key] = key[0].a;
+    }
+
+    func!(double, testObj) result = testFunc + testFunc;
+
+    foreach(key ; result.param_set) {
+        assert(result[key] == key[0].a + key[0].a, "Sum did not work right");
+    }
+    
+    result = testFunc * testFunc;
+
+    foreach(key ; result.param_set) {
+        assert(result[key] == key[0].a * key[0].a, "mult did not work right");
+    }
+
+    result = testFunc - testFunc;
+
+    foreach(key ; result.param_set) {
+        assert(result[key] == key[0].a - key[0].a, "Subtract did not work right");
+    }
+
+
+    result = testFunc / testFunc;
+    
+    foreach(key ; result.param_set) {
+        if (! (key[0].a == 0 && key[0].a == 0))
+            assert(result[key] == cast(double)key[0].a / cast(double)key[0].a, "Divide did not work right " ~ to!string(key[0].a) ~ " / " ~ to!string(key[0].a) ~ " = " ~ to!string(cast(double)key[0].a / cast(double)key[0].a) ~ " != " ~ to!string(result[key]));
+    }
+
+
+    
+    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+
+    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    
+    foreach (key ; testSet2) {
+
+        testFunc2[key] = key[1].a;
+    }
+
+
+    func!(double, testObj, testObj) result2 = testFunc2 + testFunc;
+
+    foreach (key ; testSet2) {
+
+        assert(result2[key] == key[1].a + key[1].a, "Assymetrical sum did not work right");
+    }    
+            
+    
+}
+    
