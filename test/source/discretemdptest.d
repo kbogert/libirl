@@ -972,7 +972,7 @@ class set(T ...) {
     set!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS) 
             && removeFirst!(DIMS).length == (T.length - DIMS.length) && DIMS.length < T.length
-            && dimOrderingCorrectForward!(0, DIMS)) 
+            && dimOrderingCorrectForward!(DIMS.length, DIMS, T)) 
     {
 
         alias NEWDIMS = removeFirst!(DIMS);
@@ -1011,7 +1011,7 @@ class set(T ...) {
 
     set!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS) && removeLast!(DIMS).length == (T.length - DIMS.length)
-        && DIMS.length < T.length && dimOrderingCorrectBackward!(DIMS)) 
+        && DIMS.length < T.length && dimOrderingCorrectBackward!(DIMS.length, DIMS, T)) 
     {
 
         alias NEWDIMS = removeLast!(DIMS);
@@ -1075,47 +1075,33 @@ class set(T ...) {
         enum dimOfSet = (staticIndexOf!(DIM, T) != -1);
     }
 
-/*    protected template dimOrderingCorrectForward(I, FIRST, DIM...) {
-        static if (DIM.length > 0) {
-            enum dimOrderingCorrectForward = (staticIndexOf!(FIRST, T[I..T.length]) < staticIndexOf!(DIM[0], T[I+1 .. T.length]) && dimOrderingCorrectForward!(I+1, DIM));
-        } else {
-            enum dimOrderingCorrectForward = staticIndexOf!(FIRST, T[I..T.length]) != -1;
-        }
-    }*/
 
-    // DIM[0] is index into T, don't know why I can't do it like above
-    protected template dimOrderingCorrectForward(DIM...) {
-        static if (DIM.length > 2 && is(DIM[1] == DIM[2])) {
-            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0]+1 .. T.length])+1 && dimOrderingCorrectForward!(staticIndexOf!(DIM[1], T[DIM[0]..T.length])+1, DIM[2..DIM.length]));
-        } else static if (DIM.length > 2) {
-            enum dimOrderingCorrectForward = (staticIndexOf!(DIM[1], T[DIM[0]..T.length]) < staticIndexOf!(DIM[2], T[DIM[0] .. T.length]) && dimOrderingCorrectForward!(staticIndexOf!(DIM[1], T[DIM[0]..T.length])+1, DIM[2..DIM.length]));
+    // ALLP[0] is the split between dimensions to remove and the remainder of T
+    protected template dimOrderingCorrectForward(ALLP...) {
+        enum I = ALLP[0];
+        alias FIRST = ALLP[1];
+        alias REVISEDT = ALLP[I+1..ALLP.length];
+
+        static if (I > 1) {
+            alias NEXT = ALLP[2];
+            alias REMAINDER = ALLP[2..I+1];
+            enum dimOrderingCorrectForward = staticIndexOf!(FIRST, REVISEDT) <= staticIndexOf!(NEXT, Erase!(FIRST, REVISEDT)) &&
+                    dimOrderingCorrectForward!(I-1, REMAINDER, Erase!(FIRST, REVISEDT));
+
         } else {
-            enum dimOrderingCorrectForward = staticIndexOf!(DIM[1], T[DIM[0]..T.length]) != -1;
+            enum dimOrderingCorrectForward = staticIndexOf!(FIRST, REVISEDT) != -1;
+
         }
+    }    
+
+    protected template dimOrderingCorrectBackward(ALLP...) {
+
+        enum I = ALLP[0];
+        alias REVISEDT = ALLP[I+1..ALLP.length];
+        
+        enum dimOrderingCorrectBackward = dimOrderingCorrectForward!(I, Reverse!(ALLP[1..I+1]), Reverse!(REVISEDT));
     }
 
-    protected template dimOrderingCorrectBackward(DIM...) {
-        enum dimOrderingCorrectBackward = dimOrderingCorrectBackward_!(0,Reverse!(DIM));
-    }
-
-    protected template dimOrderingCorrectBackward_(DIM...) {
-        static if (DIM.length > 2 && is(DIM[1] == DIM[2])) {
-            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]+1..T.length])+1 && dimOrderingCorrectBackward_!(staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length])+1, DIM[2..DIM.length]));
-        } else static if (DIM.length > 2) {
-            enum dimOrderingCorrectBackward_ = (staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) < staticIndexOf!(DIM[2], Reverse!(T)[DIM[0]..T.length]) && dimOrderingCorrectBackward_!(staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length])+1, DIM[2..DIM.length]));
-        } else {
-            enum dimOrderingCorrectBackward_ = staticIndexOf!(DIM[1], Reverse!(T)[DIM[0]..T.length]) != -1;
-        }
-    }
-    /*
-    protected template dimOrderingCorrectBackward_(FIRST, DIM...) {
-        static if (DIM.length > 0) {
-            enum dimOrderingCorrectBackward_ = (staticIndexOf!(FIRST, Reverse!(T)) < staticIndexOf!(DIM[0], Reverse!(T)) && dimOrderingCorrectBackward_!(DIM));
-        } else {
-            enum dimOrderingCorrectBackward_ = staticIndexOf!(FIRST, T) != -1;
-        }
-    }
-    */
     
     protected template removeLast(FIRST, REMAIN ...) {
         static if (REMAIN.length > 0) {
@@ -1298,8 +1284,9 @@ unittest {
     set!(testObj) attempt6 = bigset.remove_dim_front!(testObj, testObj2)();
 
     // should not work
-//    attempt6 = bigset.remove_dim_front!(testObj2, testObj)();
-    
+ //   attempt6 = bigset.remove_dim_front!(testObj2, testObj)();
+ //   attempt6 = bigset.remove_dim_back!(testObj, testObj2)();
+        
         
 }
 
