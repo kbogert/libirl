@@ -113,30 +113,34 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
         normalized = false;
     }
 
-    
-    public this(set!PARAMS s, mdp.DistInitType init = mdp.DistInitType.None, double skewness = 10) {
-        normalized = false;
-        double [Tuple!(PARAMS)] arr;
- 
-        if (init != mdp.DistInitType.None) {
+    public this(set!PARAMS s, DistInitType init = DistInitType.None) {
+        this(s, init, 10);
+    }
 
-            foreach(key ; mySet) {
+    
+    public this(set!PARAMS s, DistInitType init, double skewness) {
+        normalized = false;
+ 
+        if (init != DistInitType.None) {
+            double [Tuple!(PARAMS)] arr;
+ 
+            foreach(key ; s) {
                 final switch(init) {
-                  case mdp.DistInitType.Uniform:
+                  case DistInitType.Uniform:
                       arr[key] = 1.0;
                       break;
-                  case mdp.DistInitType.Exponential:
+                  case DistInitType.Exponential:
                       import std.random;
                       arr[key] = exp(uniform01() * skewness);
                       break;
-                  case mdp.DistInitType.RandomFromGaussian:
+                  case DistInitType.RandomFromGaussian:
                       import std.random;
                       double total = 0;
                       for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
                            total += uniform01();
                       arr[key] = total;
                       break;
-                  case mdp.DistInitType.None: // should never be here
+                  case DistInitType.None: // should never be here
                       break;
 
                 }
@@ -144,11 +148,13 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
             }
 
             arr.rehash();
-            
-            super(s, arr);
-            
-            normalize();
 
+            super(s, arr);
+
+            normalize();
+            
+        } else {
+            this(s, 0.0);
         }
 
     }
@@ -158,16 +164,16 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
         if (normalized) return;
 
         auto tot = 0.0;
-        foreach(val ; storage.values) {
-            tot += val;
+        foreach(key ; mySet) {
+            tot += storage.get(key, funct_default);
         }
 
         if (tot == 0.0) {
             throw new Exception("Empty distribution or all zero probabilities, cannot normalize");
         }
 
-        foreach(key, ref val ; storage) {
-            val /= tot;
+        foreach(key; mySet) {
+            storage[key] = storage.get(key, funct_default) / tot;
         }
 
         normalized = true;
@@ -180,8 +186,8 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
      // will always return a sample
      public Tuple!(PARAMS) sample() {
 
-        if (size() == 0) {
-            return null;
+        if (mySet.size() == 0) {
+            throw new Exception("Cannot sample from zero sized distribution.");
         }
           
         normalize();
@@ -190,12 +196,12 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 
         auto rand = uniform(0.0, 1.0);
 
-        auto keys = storage.keys;
+        auto keys = mySet.toArray();
         randomShuffle(keys);
 
         auto mass = 0.0;
         foreach ( k; keys) {
-            mass += storage[k];
+            mass += storage.get(k, funct_default);
 
             if (mass >= rand)
                 return k;
@@ -210,7 +216,7 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 
     }
 
-    override protected void _postElementModified(Tuple!(PARAM) key) {
+    override protected void _postElementModified(Tuple!(PARAMS) key) {
         normalized = false;
     }
 
@@ -236,14 +242,14 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 
     }
 
-    double crossEntropy(Distribution!T other_dist) {
+    double crossEntropy(distribution!PARAMS other_dist) {
         return entropy() + KLD(other_dist);
     }
 
     void optimize() {
         foreach(key, val ; storage) {
             if (val == funct_default) {
-                myDistribution.remove(key);
+                storage.remove(key);
             }
         }
 
@@ -256,30 +262,35 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 @name("Distribution Create and foreach")
 unittest {
 
-   double[testObj] init;
+   double[Tuple!(testObj)] init;
 
-   init[new testObj()] = 1;
+   init[tuple(new testObj())] = 1;
+   
+   testObjSet testSet1 = new testObjSet(1);
 
-   Distribution!(testObj) dist = new Distribution!(testObj)(init);
+   distribution!(testObj) dist = new distribution!(testObj)(testSet1, init);
 
-   assert(dist.size() == 1, "Distribution size is incorrect");
-   assert(dist[new testObj()] == 1.0, "Probability of test object is incorrect");
-
+   assert(dist.param_set().size() == 1, "Distribution size is incorrect");
+   assert(dist[tuple(new testObj())] == 1.0, "Probability of test object is incorrect");
 
    int spaceSize = 10;
-   testObjSpace tos = new testObjSpace(spaceSize);
 
-   dist = new Distribution!(testObj)(tos);
+   testSet1 = new testObjSet(spaceSize);
+   
 
-   assert(dist.size() == 0, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(0));
+   dist = new distribution!(testObj)(testSet1);
 
-   assert(dist.toString() == "", "Distribution toString incorrect");
+   assert(dist.param_set().size() == 10, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(10));
 
-   dist = new Distribution!(testObj)(tos, DistInitType.Uniform);
+   assert(dist.toString() != "", "Distribution toString incorrect");
 
-   assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
+    
+   dist = new distribution!(testObj)(testSet1, DistInitType.Uniform);
 
-   foreach(key, val ; dist) {
+   assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
+
+   foreach(key ; dist.param_set()) {
+       auto val = dist[key];
        assert(val == 1.0 / cast(double)spaceSize, "Probability incorrect in uniform distribution");
    }
 
@@ -288,11 +299,12 @@ unittest {
        writeln(dist);
    }
 
-   dist = new Distribution!(testObj)(tos, DistInitType.Exponential, 10.0);
+   dist = new distribution!(testObj)(testSet1, DistInitType.Exponential, 10.0);
 
-   assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
+   assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
    double total = 0;
-   foreach(key, val ; dist) {
+   foreach(key; dist.param_set()) {
+       auto val = dist[key];
        total += val;
    }
 
@@ -303,11 +315,12 @@ unittest {
    }
    assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
 
-   dist = new Distribution!(testObj)(tos, DistInitType.RandomFromGaussian);
+   dist = new distribution!(testObj)(testSet1, DistInitType.RandomFromGaussian);
 
-   assert(dist.size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.size()) ~ " should be: " ~ to!string(spaceSize));
+   assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
    total = 0;
-   foreach(key, val ; dist) {
+   foreach(key; dist.param_set()) {
+       auto val = dist[key];
        total += val;
    }
 
@@ -1120,6 +1133,9 @@ class set(T ...) {
          return false;
     }
 
+    public Tuple!(T) [] toArray() {
+        return storage.dup;
+    }
     public int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {
