@@ -93,6 +93,164 @@ class testObj2 {
      }   
 }
 
+class distribution(PARAMS...) : func!(double, PARAMS) {
+
+    protected bool normalized;
+
+    
+    public this(set!PARAMS s, double def) {
+        super(s, def);
+        normalized = false;
+    }
+
+    public this(set!PARAMS s, double [Tuple!(PARAMS)] arr) {
+        super(s, arr);
+        normalized = false;
+    }
+
+    public this(set!PARAMS s, double [Tuple!(PARAMS)] arr, double def) {
+        super(s, arr, def);
+        normalized = false;
+    }
+
+    
+    public this(set!PARAMS s, mdp.DistInitType init = mdp.DistInitType.None, double skewness = 10) {
+        normalized = false;
+        double [Tuple!(PARAMS)] arr;
+ 
+        if (init != mdp.DistInitType.None) {
+
+            foreach(key ; mySet) {
+                final switch(init) {
+                  case mdp.DistInitType.Uniform:
+                      arr[key] = 1.0;
+                      break;
+                  case mdp.DistInitType.Exponential:
+                      import std.random;
+                      arr[key] = exp(uniform01() * skewness);
+                      break;
+                  case mdp.DistInitType.RandomFromGaussian:
+                      import std.random;
+                      double total = 0;
+                      for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
+                           total += uniform01();
+                      arr[key] = total;
+                      break;
+                  case mdp.DistInitType.None: // should never be here
+                      break;
+
+                }
+
+            }
+
+            arr.rehash();
+            
+            super(s, arr);
+            
+            normalize();
+
+        }
+
+    }
+
+
+    public void normalize() {
+        if (normalized) return;
+
+        auto tot = 0.0;
+        foreach(val ; storage.values) {
+            tot += val;
+        }
+
+        if (tot == 0.0) {
+            throw new Exception("Empty distribution or all zero probabilities, cannot normalize");
+        }
+
+        foreach(key, ref val ; storage) {
+            val /= tot;
+        }
+
+        normalized = true;
+     }
+
+     public bool isNormalized() {
+        return normalized;
+     }
+
+     // will always return a sample
+     public Tuple!(PARAMS) sample() {
+
+        if (size() == 0) {
+            return null;
+        }
+          
+        normalize();
+
+        import std.random;
+
+        auto rand = uniform(0.0, 1.0);
+
+        auto keys = storage.keys;
+        randomShuffle(keys);
+
+        auto mass = 0.0;
+        foreach ( k; keys) {
+            mass += storage[k];
+
+            if (mass >= rand)
+                return k;
+        }
+
+        debug {
+            import std.conv;
+            throw new Exception("Didn't find a key to sample, ended at: " ~ to!string(mass) ~ " but wanted " ~ to!string(rand));
+        } else {
+            return keys[$-1];
+        }
+
+    }
+
+    override protected void _postElementModified(Tuple!(PARAM) key) {
+        normalized = false;
+    }
+
+    double KLD(distribution!PARAMS other_dist) {
+	
+    	double returnval = 0;
+    	foreach (i; mySet) {
+            auto pr = storage.get(i, funct_default);
+    		returnval += pr * log ( pr / other_dist[i]);
+    	}
+    	return returnval;
+	
+    }  
+
+    double entropy() {
+        double returnval = 0;
+
+        foreach (i; mySet) {
+            auto pr = storage.get(i, funct_default);            
+            returnval += pr * log (pr);
+        }
+        return -returnval;
+
+    }
+
+    double crossEntropy(Distribution!T other_dist) {
+        return entropy() + KLD(other_dist);
+    }
+
+    void optimize() {
+        foreach(key, val ; storage) {
+            if (val == funct_default) {
+                myDistribution.remove(key);
+            }
+        }
+
+        storage.rehash();
+    }
+}
+
 
 
 @name("Distribution Create and foreach")
@@ -484,7 +642,9 @@ class func(RETURN_TYPE, PARAM ...) {
           if ( mySet !is null && ! mySet.contains(i)) {
                throw new Exception("ERROR, key is not in the set this function is defined over.");
           }
+          _preElementModified(i);
           storage[i] = value;
+          _postElementModified(i);
     }
 
 
@@ -501,9 +661,20 @@ class func(RETURN_TYPE, PARAM ...) {
             storage[key] = funct_default;
             p = (key in storage);
         }
+        _preElementModified(key);
         mixin("*p " ~ op ~ "= rhs;");
+        _postElementModified(key);
     }    
 
+    // Since opIndexOpAssign must be non-virtual, we need callbacks that are virtual for subclasses to override behavior
+
+    // called before an element's return value is modified
+    protected void _preElementModified(Tuple!(PARAM) key) {
+    }
+
+    // called after an element's return value is modified
+    protected void _postElementModified(Tuple!(PARAM) key) {
+    }
 
     // operation with a same sized function (matrix op)
     func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM) other) 
