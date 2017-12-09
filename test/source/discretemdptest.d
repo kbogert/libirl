@@ -121,7 +121,9 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
     public this(set!PARAMS s, DistInitType init, double skewness) {
         normalized = false;
  
-        if (init != DistInitType.None) {
+        if (init == DistInitType.None) {
+            this(s, 0.0);
+        } else {
             double [Tuple!(PARAMS)] arr;
  
             foreach(key ; s) {
@@ -153,10 +155,7 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 
             normalize();
             
-        } else {
-            this(s, 0.0);
         }
-
     }
 
 
