@@ -885,4 +885,83 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
     }
 }
 
+// a specialized distribution, basically a function that returns distributions
+class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS[0..SPLIT]), PARAMS[SPLIT..PARAMS.length]) {
 
+    alias OVER = PARAMS[0..SPLIT];
+
+
+    // converts this structured function into a flat one that doesn't have any distribution features
+    public Function!(double, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) flatten() {
+
+        
+
+    }
+
+    // operation with a same sized function (matrix op)
+    Function!(double, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) opBinary(string op)(Function!(double, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) other) 
+        if ((op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[key];");
+        }
+
+        
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+
+    // operation with the over params function (vector op)
+    Function!(double, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) opBinary(string op)(Function!(double, OVER) other) 
+        if (PARAM.length > 1 && (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/")))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            auto tempKey = tuple(key[key.length - 1]);
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+        }
+
+        
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+
+    // operation with a single value (scalar op)
+    Function!(RETURN_TYPE, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) opBinary(string op)(double scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "scalar;");
+        }
+
+        
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+    
+    Function!(RETURN_TYPE, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) opBinaryRight(string op)(RETURN_TYPE scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        return opBinary!(op)(scalar);
+    }
+    
+    
+}
+
+
+// a specialized set of params X timesteps
+class Sequence (PARAMS...) {
+
+    Tuple!(PARAMS) [] timesteps;
+
+    
+    
+    
+
+}
