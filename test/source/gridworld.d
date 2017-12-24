@@ -2,7 +2,10 @@ module gridworld;
 
 
 import discretemdp;
+import discretefunctions;
 import std.conv;
+import std.typecons;
+
 
 class GridWorldState : discretemdp.State {
      private int x;
@@ -74,26 +77,42 @@ class GridWorldActionRight : discretemdp.Action {
 
 
 
-class GridWorldStateSpace : discretemdp.StateSpace {
-
-     private GridWorldState [] states;
+class GridWorldStateSpace : discretefunctions.Set!(GridWorldState) {
 
 
-     public GridWorldState [] getStates() {
-          return states;
-     }
+    public this(int sizeX, int sizeY) {
+        Tuple!(GridWorldState) [] tempArr;
+        for (int i = 0; i < sizeX; i ++) {
+            for (int j = 0; j < sizeY; j ++) {
+                tempArr ~= tuple(new GridWorldState(i, j));
+            }
+        } 
 
-     override public ulong size() {
-          return states.length;
-     }
+        super(tempArr);
+    }
+
+    public this(Set!(GridWorldState) toCopy) {
+        super(toCopy.storage.dup);
+    }
 }
 
 
-class GridWorldActionSpace : discretemdp.ActionSpace {
+class GridWorldActionSpace : discretefunctions.Set!(Action) {
 
-     override public ulong size() {
-          return 0;
-     }
+    public this() {
+
+        Tuple!(Action) [] tempArr;
+
+        tempArr ~= tuple(cast(Action)new GridWorldActionUp());
+        tempArr ~= tuple(cast(Action)new GridWorldActionDown());
+        tempArr ~= tuple(cast(Action)new GridWorldActionLeft());
+        tempArr ~= tuple(cast(Action)new GridWorldActionRight());
+        
+        
+        super(tempArr);
+    }
+
+
 }
 
 
@@ -112,7 +131,7 @@ class GridWorldModel : discretemdp.Model {
 
 class GridWorldReward : discretemdp.LinearReward {
 
-        discretemdp.Distribution!State uniform;
+        Distribution!State uniform;
 
 }
 

@@ -73,7 +73,7 @@ unittest {
    
    testObjSet testSet1 = new testObjSet(1);
 
-   distribution!(testObj) dist = new distribution!(testObj)(testSet1, init);
+   Distribution!(testObj) dist = new Distribution!(testObj)(testSet1, init);
 
    assert(dist.param_set().size() == 1, "Distribution size is incorrect");
    assert(dist[tuple(new testObj())] == 1.0, "Probability of test object is incorrect");
@@ -83,14 +83,14 @@ unittest {
    testSet1 = new testObjSet(spaceSize);
    
 
-   dist = new distribution!(testObj)(testSet1);
+   dist = new Distribution!(testObj)(testSet1);
 
    assert(dist.param_set().size() == 10, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(10));
 
    assert(dist.toString() != "", "Distribution toString incorrect");
 
     
-   dist = new distribution!(testObj)(testSet1, DistInitType.Uniform);
+   dist = new Distribution!(testObj)(testSet1, DistInitType.Uniform);
 
    assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
 
@@ -104,7 +104,7 @@ unittest {
        writeln(dist);
    }
 
-   dist = new distribution!(testObj)(testSet1, DistInitType.Exponential, 10.0);
+   dist = new Distribution!(testObj)(testSet1, DistInitType.Exponential, 10.0);
 
    assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
    double total = 0;
@@ -120,7 +120,7 @@ unittest {
    }
    assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
 
-   dist = new distribution!(testObj)(testSet1, DistInitType.RandomFromGaussian);
+   dist = new Distribution!(testObj)(testSet1, DistInitType.RandomFromGaussian);
 
    assert(dist.param_set().size() == spaceSize, "Distribution size is incorrect: " ~ to!string(dist.param_set().size()) ~ " should be: " ~ to!string(spaceSize));
    total = 0;
@@ -149,7 +149,7 @@ unittest {
 
    testObjSet testSet1 = new testObjSet(1);
 
-   distribution!(testObj) dist = new distribution!(testObj)(testSet1, init);
+   Distribution!(testObj) dist = new Distribution!(testObj)(testSet1, init);
 
    assert(dist.param_set().size() == 1, "Distribution size is incorrect");
    assert(dist[new testObj()] == 1.0, "Probability of test object is incorrect");
@@ -158,7 +158,7 @@ unittest {
    a.a = 1;
 
    testSet1 = new testObjSet(2);
-   dist = new distribution!(testObj)(testSet1, init);
+   dist = new Distribution!(testObj)(testSet1, init);
 
    dist[a] = 0.0;
 
@@ -167,7 +167,7 @@ unittest {
    assert(dist[a] == 0, "Probability of test object is incorrect: " ~ to!string(dist[a]) ~ " should be: 0");
 
    testSet1 = new testObjSet(200);
-   dist = new distribution!(testObj)(testSet1);
+   dist = new Distribution!(testObj)(testSet1);
    
    for (int i = 0; i < 200; i ++) {
        dist[new testObj(i)] += i;
@@ -226,13 +226,13 @@ unittest {
 
     for (int k = 0; k < 100; k ++) {
 
-        distribution!(testObj) dist = new distribution!(testObj)(testSet1, DistInitType.Uniform);
+        Distribution!(testObj) dist = new Distribution!(testObj)(testSet1, DistInitType.Uniform);
 
         assert(abs(dist.entropy() - 6.21461) < HALFTOLERANCE, "Distribution entropy is incorrect");
 
         // create a new distribution from the samples
 
-        distribution!testObj dist2 = new distribution!testObj(testSet1);
+        Distribution!testObj dist2 = new Distribution!testObj(testSet1);
 
         for (int j = 0; j < samples; j ++) {
             dist2[dist.sample()] += 1;
@@ -261,7 +261,7 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(0);
     
-    distribution!(testObj) dist = new distribution!(testObj)(testSet1);
+    Distribution!(testObj) dist = new Distribution!(testObj)(testSet1);
 
 
     try {
@@ -313,7 +313,7 @@ unittest{
 
     auto fullSet = testSet1.cartesian_product(testSet1);
 
-    auto dist = new distribution!(testObj, testObj)(fullSet, DistInitType.Uniform);
+    auto dist = new Distribution!(testObj, testObj)(fullSet, DistInitType.Uniform);
 
     foreach(key; fullSet) {
         assert(dist[key] == 1.0 / (dimSize * dimSize), "Distribution is not uniform");
@@ -332,7 +332,7 @@ unittest{
 
 
 
-class testObjSet : set!(testObj) {
+class testObjSet : Set!(testObj) {
 
     public this(int size) {
         Tuple!(testObj) [] tempArr;
@@ -342,13 +342,13 @@ class testObjSet : set!(testObj) {
         super(tempArr);
     }
 
-    public this(set!(testObj) toCopy) {
+    public this(Set!(testObj) toCopy) {
         super(toCopy.storage.dup);
     }
 }
 
 
-class testObj2Set : set!(testObj2) {
+class testObj2Set : Set!(testObj2) {
 
     public this(int size) {
         Tuple!(testObj2) [] tempArr;
@@ -358,7 +358,7 @@ class testObj2Set : set!(testObj2) {
         super(tempArr);
     }
 
-    public this(set!(testObj2) toCopy) {
+    public this(Set!(testObj2) toCopy) {
         super(toCopy.storage.dup);
     }
 }
@@ -396,7 +396,7 @@ unittest {
     testObjSet testSet = new testObjSet(size);
 
 
-    set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
+    Set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
     
     assert(newSet.size() == size * size, "Set size is incorrect");
 
@@ -404,7 +404,7 @@ unittest {
         assert(newSet.contains(obj));
     }
 
-    set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
+    Set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
 
     assert(bigSet.size() == size * size * size, "Set size is incorrect");
     
@@ -419,9 +419,9 @@ unittest {
     testObjSet testSet = new testObjSet(size);
 
 
-    set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
+    Set!(testObj, testObj) newSet = testSet.cartesian_product(testSet);
 
-    set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
+    Set!(testObj, testObj, testObj) bigSet = newSet.cartesian_product(testSet);
 
     testObjSet finalSet = new testObjSet( newSet.orth_project!(testObj)() );
 
@@ -445,7 +445,7 @@ unittest {
 
     assert(newSet.size() == size * size, "Set size is incorrect");
 
-    set!(testObj, testObj) newSet2 = newSet.orth_project!(testObj, testObj)();
+    Set!(testObj, testObj) newSet2 = newSet.orth_project!(testObj, testObj)();
 
 }
 
@@ -460,12 +460,12 @@ unittest {
     testObj2Set testSet2 = new testObj2Set(size2);
     
 
-    set!(testObj, testObj2, testObj) bigset = testSet1.cartesian_product(testSet2).cartesian_product(testSet1);
+    Set!(testObj, testObj2, testObj) bigset = testSet1.cartesian_product(testSet2).cartesian_product(testSet1);
 
     
     // back
     
-    set!(testObj, testObj2) attempt1 = bigset.orth_project!(testObj, testObj2)();
+    Set!(testObj, testObj2) attempt1 = bigset.orth_project!(testObj, testObj2)();
 
     assert(attempt1.size() == size * size2, "Set size is incorrect");
     
@@ -473,25 +473,25 @@ unittest {
 
     assert(attempt1.size() == size * size2, "Set size is incorrect");
     
-    set!(testObj, testObj) attempt2  = bigset.remove_dim_back!(testObj2)();
+    Set!(testObj, testObj) attempt2  = bigset.remove_dim_back!(testObj2)();
 
     assert(attempt2.size() == size * size, "Set size is incorrect");
 
-    set!(testObj) attempt3 = bigset.remove_dim_back!(testObj2, testObj)();
+    Set!(testObj) attempt3 = bigset.remove_dim_back!(testObj2, testObj)();
     
 
     // front
 
        
-    set!(testObj2, testObj) attempt4 = bigset.remove_dim_front!(testObj)();    
+    Set!(testObj2, testObj) attempt4 = bigset.remove_dim_front!(testObj)();    
 
     assert(attempt4.size() == size * size2, "Set size is incorrect");
     
-    set!(testObj, testObj) attempt5  = bigset.remove_dim_front!(testObj2)();
+    Set!(testObj, testObj) attempt5  = bigset.remove_dim_front!(testObj2)();
 
     assert(attempt5.size() == size * size, "Set size is incorrect");
 
-    set!(testObj) attempt6 = bigset.remove_dim_front!(testObj, testObj2)();
+    Set!(testObj) attempt6 = bigset.remove_dim_front!(testObj, testObj2)();
 
     // should not work
  //   attempt6 = bigset.remove_dim_front!(testObj2, testObj)();
@@ -509,11 +509,11 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(size);
 
-    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+    Function!(double, testObj) testFunc = new Function!(double, testObj)(testSet1, 0.0);
 
-    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+    Set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
 
-    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    Function!(double, testObj, testObj) testFunc2 = new Function!(double, testObj, testObj)(testSet2, 0.0);
 
     foreach (key ; testSet1) {
 
@@ -534,11 +534,11 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(size);
 
-    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+    Function!(double, testObj) testFunc = new Function!(double, testObj)(testSet1, 0.0);
 
-    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+    Set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
 
-    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    Function!(double, testObj, testObj) testFunc2 = new Function!(double, testObj, testObj)(testSet2, 0.0);
 
     foreach (key ; testSet1) {
 
@@ -554,14 +554,14 @@ unittest {
 
     assert(testFunc2.max().max() == 18, "Max did not work");
 
-    func!(double, testObj) max1 = testFunc2.max!(testObj)();
+    Function!(double, testObj) max1 = testFunc2.max!(testObj)();
 
     foreach (key; max1.param_set()) {
         assert(max1[key] == key[0].a + 9, "Something is wrong with the max calculation");
     }
 
 
-    func!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
+    Function!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
 
     foreach (key; testArgMax.param_set()) {
 
@@ -587,11 +587,11 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(size);
 
-    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+    Function!(double, testObj) testFunc = new Function!(double, testObj)(testSet1, 0.0);
 
-    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+    Set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
 
-    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    Function!(double, testObj, testObj) testFunc2 = new Function!(double, testObj, testObj)(testSet2, 0.0);
 
     foreach (key ; testSet1) {
 
@@ -621,11 +621,11 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(size);
 
-    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+    Function!(double, testObj) testFunc = new Function!(double, testObj)(testSet1, 0.0);
 
-    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+    Set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
 
-    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    Function!(double, testObj, testObj) testFunc2 = new Function!(double, testObj, testObj)(testSet2, 0.0);
 
     foreach (key ; testSet1) {
 
@@ -637,9 +637,9 @@ unittest {
         testFunc2[key] = key[1].a;
     }
 
-    func!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
+    Function!(Tuple!(testObj), testObj) testArgMax = testFunc2.argmax();
 
-    func!(double, testObj) testFunc3 = testFunc2.apply(testArgMax);
+    Function!(double, testObj) testFunc3 = testFunc2.apply(testArgMax);
 
     foreach(key ; testFunc3.param_set) {
         assert(testFunc3[key] == 9, "Apply did not select correct items");
@@ -656,14 +656,14 @@ unittest {
 
     testObjSet testSet1 = new testObjSet(size);
 
-    func!(double, testObj) testFunc = new func!(double, testObj)(testSet1, 0.0);
+    Function!(double, testObj) testFunc = new Function!(double, testObj)(testSet1, 0.0);
 
         foreach (key ; testSet1) {
 
         testFunc[key] = key[0].a;
     }
 
-    func!(double, testObj) result = testFunc + testFunc;
+    Function!(double, testObj) result = testFunc + testFunc;
 
     foreach(key ; result.param_set) {
         assert(result[key] == key[0].a + key[0].a, "Sum did not work right");
@@ -691,9 +691,9 @@ unittest {
 
 
     
-    set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
+    Set!(testObj, testObj) testSet2 = testSet1.cartesian_product(testSet1);
 
-    func!(double, testObj, testObj) testFunc2 = new func!(double, testObj, testObj)(testSet2, 0.0);
+    Function!(double, testObj, testObj) testFunc2 = new Function!(double, testObj, testObj)(testSet2, 0.0);
     
     foreach (key ; testSet2) {
 
@@ -701,7 +701,7 @@ unittest {
     }
 
 
-    func!(double, testObj, testObj) result2 = testFunc2 + testFunc;
+    Function!(double, testObj, testObj) result2 = testFunc2 + testFunc;
 
     foreach (key ; testSet2) {
 
