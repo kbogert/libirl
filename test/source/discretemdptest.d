@@ -337,26 +337,33 @@ unittest {
 
 @name("Building Distributions with +=")
 unittest {
-   double[testObj] init;
+   double[Tuple!(testObj)] init;
 
-   init[new testObj()] = 1;
+   init[tuple(new testObj())] = 1;
 
-   Distribution!(testObj) dist = new Distribution!(testObj)(init);
+   testObjSet testSet1 = new testObjSet(1);
 
-   assert(dist.size() == 1, "Distribution size is incorrect");
+   distribution!(testObj) dist = new distribution!(testObj)(testSet1, init);
+
+   assert(dist.param_set().size() == 1, "Distribution size is incorrect");
    assert(dist[new testObj()] == 1.0, "Probability of test object is incorrect");
 
    testObj a = new testObj();
    a.a = 1;
 
+   testSet1 = new testObjSet(2);
+   dist = new distribution!(testObj)(testSet1, init);
+
    dist[a] = 0.0;
 
    dist.normalize();
-   assert(dist.size() == 2, "Distribution size is incorrect");
+   assert(dist.param_set().size() == 2, "Distribution size is incorrect");
    assert(dist[a] == 0, "Probability of test object is incorrect: " ~ to!string(dist[a]) ~ " should be: 0");
 
-
-   for (int i = 2; i < 200; i ++) {
+   testSet1 = new testObjSet(200);
+   dist = new distribution!(testObj)(testSet1);
+   
+   for (int i = 0; i < 200; i ++) {
        dist[new testObj(i)] += i;
    }
 
@@ -374,9 +381,9 @@ unittest {
    foreach(b ; 0 .. 200)
        sum += b;
 
-   assert(dist[new testObj(199)] == 199.0 / sum, "Normalization Error");
-   assert(dist[new testObj(0)] == 1.0 / sum, "Normalization Error");
-   assert(dist[new testObj(150)] == 150.0 / sum, "Normalization Error");
+   assert(dist[new testObj(199)] == 199.0 / sum, "Normalization Error on item 199");
+   assert(dist[new testObj(0)] == 0.0 / sum, "Normalization Error on item 0");
+   assert(dist[new testObj(150)] == 150.0 / sum, "Normalization Error on item 150");
 
    for (int i = 0; i < 200; i ++) {
        dist[new testObj(199 - i)] += i;
@@ -393,7 +400,7 @@ unittest {
 
    dist.normalize();
 
-   assert (dist.argmax() == new testObj(0), "Argmax didn't work!");
+   assert (dist.argmax()[0] == new testObj(0), "Argmax didn't work!");
 
 
 
@@ -649,7 +656,10 @@ class func(RETURN_TYPE, PARAM ...) {
         return funct_default;
     }
 
-
+    RETURN_TYPE opIndex(PARAM i ) {
+        return opIndex(tuple(i));
+    }
+    
     void opIndexAssign(RETURN_TYPE value, Tuple!(PARAM) i) {
           if ( mySet !is null && ! mySet.contains(i)) {
                throw new Exception("ERROR, key is not in the set this function is defined over.");
@@ -659,10 +669,14 @@ class func(RETURN_TYPE, PARAM ...) {
           _postElementModified(i);
     }
 
+    void opIndexAssign(RETURN_TYPE value, PARAM i) {
+
+        opIndexAssign(value, tuple(i));
+    }
 
     // FOR NUMERIC RETURN TYPES ONLY
     void opIndexOpAssign(string op)(RETURN_TYPE rhs, Tuple!(PARAM) key) 
-        if (isNumeric(RETURN_TYPE))
+        if (isNumeric!(RETURN_TYPE))
     {
         RETURN_TYPE* p;
         p = (key in storage);
@@ -678,6 +692,12 @@ class func(RETURN_TYPE, PARAM ...) {
         _postElementModified(key);
     }    
 
+    void opIndexOpAssign(string op)(RETURN_TYPE rhs, PARAM key) 
+        if (isNumeric!(RETURN_TYPE))
+    {
+        opIndexOpAssign!(op)(rhs, tuple(key));
+        
+    }
     // Since opIndexOpAssign must be non-virtual, we need callbacks that are virtual for subclasses to override behavior
 
     // called before an element's return value is modified
