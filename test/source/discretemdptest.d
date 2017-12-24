@@ -331,7 +331,7 @@ unittest {
 
    assert(abs(1.0 - total) < TOLERANCE, "Probability distribution not normalized: " ~ to!string(total) ~ " should be 1.0");
 
-   
+   dist.optimize();
 }
 
 
@@ -406,67 +406,6 @@ unittest {
 
 }
 
-
-@name("Distribution iterations")
-unittest {
-
-    // generate a distribution and test the iteration methods
-
-
-    Distribution!(testObj) dist = new Distribution!(testObj)();
-
-
-    int total = 0;
-    
-    for (int i = 0; i < 200; i ++) {
-        dist[new testObj(i)] = i;
-        total += i;
-    }
-
-    dist.normalize();
-
-
-    int counter = 0;
-    foreach(key ; dist.byKey()) {
-        counter += key.a;
-    }
-
-    assert(counter == total, "Didn't iterate through all the keys.");
-
-    double prob = 0;
-    
-    foreach(val ; dist.byValue()) {
-        prob += val;
-    }
-
-    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
-
-    counter = 0;
-    prob = 0;
-
-    foreach( T ; dist.byKeyValue()) {
-        counter += T.key.a;
-        prob += T.value;
-    }
-    
-    assert(counter == total, "Didn't iterate through all the keys.");
-    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
-
-    
-    counter = 0;
-    prob = 0;
-
-    foreach( key, value ; dist) {
-        counter += key.a;
-        prob += value;
-    }
-    
-    assert(counter == total, "Didn't iterate through all the keys.");
-    assert(abs( prob - 1.0) < TOLERANCE, "Didn't iterate through all the values - " ~ to!string(prob));
-
-    
-}
-
 version(fullunittest) {
 
 @name("Distribution sampling") 
@@ -477,22 +416,17 @@ unittest {
 
     double KLD = 0.0035;
 
+    testObjSet testSet1 = new testObjSet(distSize);
+
     for (int k = 0; k < 100; k ++) {
 
-        Distribution!(testObj) dist = new Distribution!(testObj)();
-
-        
-        for (int i = 0; i < distSize; i ++) {
-            dist[new testObj(i)] = 1;
-        }
-
-        dist.normalize();
+        distribution!(testObj) dist = new distribution!(testObj)(testSet1, DistInitType.Uniform);
 
         assert(abs(dist.entropy() - 6.21461) < HALFTOLERANCE, "Distribution entropy is incorrect");
 
         // create a new distribution from the samples
 
-        Distribution!testObj dist2 = new Distribution!testObj();
+        distribution!testObj dist2 = new distribution!testObj(testSet1);
 
         for (int j = 0; j < samples; j ++) {
             dist2[dist.sample()] += 1;
@@ -519,7 +453,9 @@ unittest {
 @name("Empty Distribution") 
 unittest {
 
-    Distribution!(testObj) dist = new Distribution!(testObj)();
+    testObjSet testSet1 = new testObjSet(0);
+    
+    distribution!(testObj) dist = new distribution!(testObj)(testSet1);
 
 
     try {
@@ -531,87 +467,60 @@ unittest {
         // This is supposed to happen
     }
 
-    assert(dist.argmax() is null, "Argmax not working right in an empty distribution");
+    assert(dist.argmax()[0] is null, "Argmax not working right in an empty distribution");
 
-    foreach(t, v ; dist) {
+    foreach(key ; dist.param_set()) {
         assert(false, "There should be nothing to iter over in an empty distribution");
     }
-
-    foreach(key ; dist.byKey()) {
-        assert(false, "There should be nothing to iter over in an empty distribution");
-    }
-
-    foreach(val ; dist.byValue()) {
-        assert(false, "There should be nothing to iter over in an empty distribution");
-    }
-
-    foreach( T ; dist.byKeyValue()) {
-        assert(false, "There should be nothing to iter over in an empty distribution");
-    }
-
-    assert(dist[new testObj(0)] == 0, "Index should have returned a zero for everything in an empty distribution");
-
-    assert(dist.size() == 0, "Size should be zero");
-
-    assert(dist.sample() is null, "Sample should return null");
-}
-
-
-@name("Space tests")
-unittest {
-    Distribution!(testObj) dist = new Distribution!(testObj)(new testObjSpace(10));
 
     try {
-        dist[new testObj(11)];
+        dist[new testObj(0)] = 0;
+        
+        assert(false, "Index should have cause an exception in an empty distribution");
 
-        assert(false, "Should not allow access to objects outside of the space");      
-    } catch (Exception e) {
-        // this is supposed to happen
-    }
-
-    
-    try {
-        dist[new testObj(11)] = 1.0;
-
-        assert(false, "Should not allow access to objects outside of the space");      
     } catch (Exception e) {
         // this is supposed to happen
     }
     
+    assert(dist.param_set().size() == 0, "Size should be zero");
+
     try {
-        dist[new testObj(11)] += 1;
+        dist.sample();
+        
+        assert(false, "Sample should throw an exception in an empty distribution");
 
-        assert(false, "Should not allow access to objects outside of the space");      
     } catch (Exception e) {
-        // this is supposed to happen
+        // supposed to happen
     }
 }
 
 
-@name("Distribution optimize")
-unittest {
+@name("Multidimensional distributions") 
+unittest{
 
-    // generate a distribution and test the iteration methods
+    // test a two dimensional distribution, State action state for example
+    // make sure indexing works correctly as well as normalize
 
+    int dimSize = 5;
 
-    Distribution!(testObj) dist = new Distribution!(testObj)();
+    testObjSet testSet1 = new testObjSet(dimSize);
 
+    auto fullSet = testSet1.cartesian_product(testSet1);
 
-    
-    for (int i = 0; i < 200; i ++) {
-        dist[new testObj(i)] = i;
+    auto dist = new distribution!(testObj, testObj)(fullSet, DistInitType.Uniform);
+
+    foreach(key; fullSet) {
+        assert(dist[key] == 1.0 / (dimSize * dimSize), "Distribution is not uniform");
     }
 
-    dist.normalize();
+    auto one = new testObj(1);
+    auto two = new testObj(2);
 
-    assert(dist.size() == 200, "Distribution size is wrong");
+    assert(dist[one, two] == 1.0 / (dimSize * dimSize), "Indexing not working right");
+    assert(dist[tuple(one, two)] == 1.0 / (dimSize * dimSize), "Indexing not working right");
 
-    dist.optimize();
-
-    assert(dist.size() == 199, "Distribution size not reduced by optimize()");
     
 }
-
 
 
 // Function and set experimenting
