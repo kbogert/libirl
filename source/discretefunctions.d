@@ -9,7 +9,7 @@ import std.math;
 
 
 // could be optimized for 1D sets by removing the tuples, if I feel like it I guess
-class set(T ...) {
+class Set(T ...) {
 
     Tuple!(T) [] storage;
 
@@ -42,17 +42,17 @@ class set(T ...) {
           return result;
     }
     
-    set!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
+    Set!(PROJECTED_DIMS) orth_project(PROJECTED_DIMS...)()
         if (PROJECTED_DIMS.length > 0 && allSatisfy!(dimOfSet, PROJECTED_DIMS) ) 
     {
         static if (is (PROJECTED_DIMS == T)) {
-            return new set!(T)(storage.dup);
+            return new Set!(T)(storage.dup);
         } else {
             return remove_dim_back!( removeFirst!(PROJECTED_DIMS) )();
         }
     }
 
-    set!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
+    Set!( removeFirst!(DIMS) ) remove_dim_front(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS) 
             && removeFirst!(DIMS).length == (T.length - DIMS.length) && DIMS.length < T.length
             && dimOrderingCorrectForward!(DIMS.length, DIMS, T)) 
@@ -88,11 +88,11 @@ class set(T ...) {
 
         
 
-        return new set!(NEWDIMS)(newElements.keys);
+        return new Set!(NEWDIMS)(newElements.keys);
         
     }
 
-    set!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
+    Set!( removeLast!(DIMS) ) remove_dim_back(DIMS...)()
         if (DIMS.length > 0 && allSatisfy!(dimOfSet, DIMS) && removeLast!(DIMS).length == (T.length - DIMS.length)
         && DIMS.length < T.length && dimOrderingCorrectBackward!(DIMS.length, DIMS, T)) 
     {
@@ -126,11 +126,11 @@ class set(T ...) {
 
         
 
-        return new set!(NEWDIMS)(newElements.keys);
+        return new Set!(NEWDIMS)(newElements.keys);
     }
 
 
-    set!( AliasSeq!(T, A) ) cartesian_product(A) (set!(A) a) {
+    Set!( AliasSeq!(T, A) ) cartesian_product(A) (Set!(A) a) {
 
         alias NEWDIMS = AliasSeq!(T, A);
 
@@ -149,7 +149,7 @@ class set(T ...) {
             }
         }
 
-        return new set!(NEWDIMS)(newElements);
+        return new Set!(NEWDIMS)(newElements);
     }
 
 
@@ -205,19 +205,19 @@ class set(T ...) {
 
 
 
-class func(RETURN_TYPE, PARAM ...) {
+class Function(RETURN_TYPE, PARAM ...) {
 
     RETURN_TYPE [Tuple!(PARAM)] storage;
-    set!PARAM mySet;
+    Set!PARAM mySet;
 
     RETURN_TYPE funct_default;
 
-    public this(set!PARAM s, RETURN_TYPE def) {
+    public this(Set!PARAM s, RETURN_TYPE def) {
         mySet = s;
         funct_default = def;
     }
 
-    public this(set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr) {
+    public this(Set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr) {
         mySet = s;
         storage = arr;
         foreach(key ; mySet) {
@@ -226,7 +226,7 @@ class func(RETURN_TYPE, PARAM ...) {
         }
     }
 
-    public this(set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr, RETURN_TYPE def) {
+    public this(Set!PARAM s, RETURN_TYPE [Tuple!(PARAM)] arr, RETURN_TYPE def) {
         mySet = s;
         storage = arr;
         funct_default = def;  
@@ -297,7 +297,7 @@ class func(RETURN_TYPE, PARAM ...) {
     }
 
     // operation with a same sized function (matrix op)
-    func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM) other) 
+    Function!(RETURN_TYPE, PARAM) opBinary(string op)(Function!(RETURN_TYPE, PARAM) other) 
         if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
@@ -308,11 +308,11 @@ class func(RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
     }
 
     // operation with a single param function (vector op)
-    func!(RETURN_TYPE, PARAM) opBinary(string op)(func!(RETURN_TYPE, PARAM[PARAM.length - 1]) other) 
+    Function!(RETURN_TYPE, PARAM) opBinary(string op)(Function!(RETURN_TYPE, PARAM[PARAM.length - 1]) other) 
         if (PARAM.length > 1 && (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/")))
     {
 
@@ -324,11 +324,11 @@ class func(RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
     }
 
     // operation with a single value (scalar op)
-    func!(RETURN_TYPE, PARAM) opBinary(string op)(RETURN_TYPE scalar) 
+    Function!(RETURN_TYPE, PARAM) opBinary(string op)(RETURN_TYPE scalar) 
         if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
@@ -339,10 +339,10 @@ class func(RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new func!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
     }
     
-    func!(RETURN_TYPE, PARAM) opBinaryRight(string op)(RETURN_TYPE scalar) 
+    Function!(RETURN_TYPE, PARAM) opBinaryRight(string op)(RETURN_TYPE scalar) 
         if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
@@ -351,8 +351,8 @@ class func(RETURN_TYPE, PARAM ...) {
         
     // These functions should probably stay removed, instead get the user to use the function's param set for looping:
 
-    // foreach (key ; func.param_set)
-    //      func[key] ... 
+    // foreach (key ; Function.param_set)
+    //      Function[key] ... 
 /*    auto byKey() {
         return storage.byKey();
     }
@@ -397,7 +397,7 @@ class func(RETURN_TYPE, PARAM ...) {
         return mySet.size();
     }
      
-    public set!(PARAM) param_set() {
+    public Set!(PARAM) param_set() {
         return mySet;
     }
 
@@ -470,14 +470,14 @@ class func(RETURN_TYPE, PARAM ...) {
         
     } else {
         
-        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) max()() {
+        Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) max()() {
 
             return max!(PARAM[PARAM.length - 1])();
 
         }
 
 
-        func!(RETURN_TYPE, removeLast!(TOREMOVE) ) max(TOREMOVE...)() 
+        Function!(RETURN_TYPE, removeLast!(TOREMOVE) ) max(TOREMOVE...)() 
             if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
@@ -525,17 +525,17 @@ class func(RETURN_TYPE, PARAM ...) {
             }
             
 
-            return new func!(RETURN_TYPE,SUBPARAM)(newSet, max);
+            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, max);
             
         }
 
-        func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 1] ) argmax()() {
+        Function!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 1] ) argmax()() {
 
             return argmax!(PARAM[PARAM.length - 1])();
 
         }
         
-        func!(Tuple!(TOREMOVE), removeLast!(TOREMOVE) ) argmax(TOREMOVE...)() 
+        Function!(Tuple!(TOREMOVE), removeLast!(TOREMOVE) ) argmax(TOREMOVE...)() 
             if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE))
 
         {
@@ -605,12 +605,12 @@ class func(RETURN_TYPE, PARAM ...) {
                 
             }
 
-            return new func!(Tuple!(TOREMOVE),SUBPARAM)(newSet, max_key);
+            return new Function!(Tuple!(TOREMOVE),SUBPARAM)(newSet, max_key);
         }
 
 
         
-        func!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) sumout()() 
+        Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) sumout()() 
             if (isNumeric!(RETURN_TYPE))
         {
 
@@ -619,7 +619,7 @@ class func(RETURN_TYPE, PARAM ...) {
         }
 
 
-        func!(RETURN_TYPE, removeLast!(TOREMOVE) ) sumout(TOREMOVE...)() 
+        Function!(RETURN_TYPE, removeLast!(TOREMOVE) ) sumout(TOREMOVE...)() 
             if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE) && isNumeric!(RETURN_TYPE))
         {
             alias SUBPARAM = removeLast!(TOREMOVE);
@@ -665,13 +665,13 @@ class func(RETURN_TYPE, PARAM ...) {
             }
             
 
-            return new func!(RETURN_TYPE,SUBPARAM)(newSet, sum);
+            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, sum);
             
         }       
 
 
         
-        func!(RETURN_TYPE, PARAM[0..PARAM.length - 1]) apply()(func!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0..PARAM.length -1]) f)
+        Function!(RETURN_TYPE, PARAM[0..PARAM.length - 1]) apply()(Function!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0..PARAM.length -1]) f)
         {
 
             RETURN_TYPE [ Tuple!(PARAM[0..PARAM.length -1]) ] chosen;
@@ -684,7 +684,7 @@ class func(RETURN_TYPE, PARAM ...) {
 
             }
 
-            return new func!(RETURN_TYPE, PARAM[0..PARAM.length -1])(f.param_set(), chosen);        
+            return new Function!(RETURN_TYPE, PARAM[0..PARAM.length -1])(f.param_set(), chosen);        
 
         }
     }
@@ -722,32 +722,32 @@ class func(RETURN_TYPE, PARAM ...) {
 enum DistInitType {None, Uniform, Exponential, RandomFromGaussian};
 
 
-class distribution(PARAMS...) : func!(double, PARAMS) {
+class Distribution(PARAMS...) : Function!(double, PARAMS) {
 
     protected bool normalized;
 
     
-    public this(set!PARAMS s, double def) {
+    public this(Set!PARAMS s, double def) {
         super(s, def);
         normalized = false;
     }
 
-    public this(set!PARAMS s, double [Tuple!(PARAMS)] arr) {
+    public this(Set!PARAMS s, double [Tuple!(PARAMS)] arr) {
         super(s, arr);
         normalized = false;
     }
 
-    public this(set!PARAMS s, double [Tuple!(PARAMS)] arr, double def) {
+    public this(Set!PARAMS s, double [Tuple!(PARAMS)] arr, double def) {
         super(s, arr, def);
         normalized = false;
     }
 
-    public this(set!PARAMS s, DistInitType init = DistInitType.None) {
+    public this(Set!PARAMS s, DistInitType init = DistInitType.None) {
         this(s, init, 10);
     }
 
     
-    public this(set!PARAMS s, DistInitType init, double skewness) {
+    public this(Set!PARAMS s, DistInitType init, double skewness) {
         normalized = false;
  
         if (init == DistInitType.None) {
@@ -848,7 +848,7 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
         normalized = false;
     }
 
-    double KLD(distribution!PARAMS other_dist) {
+    double KLD(Distribution!PARAMS other_dist) {
 	
     	double returnval = 0;
     	foreach (i; mySet) {
@@ -870,7 +870,7 @@ class distribution(PARAMS...) : func!(double, PARAMS) {
 
     }
 
-    double crossEntropy(distribution!PARAMS other_dist) {
+    double crossEntropy(Distribution!PARAMS other_dist) {
         return entropy() + KLD(other_dist);
     }
 
