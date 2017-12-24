@@ -709,6 +709,15 @@ class func(RETURN_TYPE, PARAM ...) {
     }
     */
 
+    
+    size_t opDollar(size_t pos)() {
+        return mySet.size();
+    }
+
+    size_t size() {
+        return mySet.size();
+    }
+     
     public set!(PARAM) param_set() {
         return mySet;
     }
