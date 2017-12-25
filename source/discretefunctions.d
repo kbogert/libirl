@@ -941,19 +941,18 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER other) 
         if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
-        return flatten.opBinary!(op)(other);
+        return flatten().opBinary!(op)(other);
     }
 
     // operation with the over params function (vector op)
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
-        if (PARAM.length > 1 && (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/")))
+        if (PARAM.length > 1 && ((op=="+"||op=="-"||op=="*"||op=="/")))
     {
-
         RETURN_TYPE [Tuple!(PARAM)] result;
 
         foreach (key ; mySet) {
             auto tempKey = tuple(key[key.length - 1]);
-            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ " other[tempKey];");
         }
 
         
@@ -962,21 +961,25 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 
     // operation with a single value (scalar op)
     Function!(RETURN_TYPE, PARAMS, OVER) opBinary(string op)(double scalar) 
-        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+        if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
+        auto combined_params = param_set.cartesian_product(over_param_set);
 
-        RETURN_TYPE [Tuple!(PARAM)] result;
+        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params);
 
-        foreach (key ; mySet) {
-            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "scalar;");
+        foreach(key; param_set) {
+            foreach(key2; over_param_set) {
+                auto fullKey = tuple(key1[], key2[]);
+
+                mixin("returnval[fullkey] = storage.get(key1, new Distribution!(OVER)(over_params))[key2] " ~ op ~ " scalar;");
+            }
         }
 
-        
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+        return returnval;        
     }
     
-    Function!(RETURN_TYPE, PARAMS, OVER) opBinaryRight(string op)(RETURN_TYPE scalar) 
-        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    Function!(RETURN_TYPE, PARAMS, OVER) opBinaryRight(string op)(double scalar) 
+        if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
         return opBinary!(op)(scalar);
