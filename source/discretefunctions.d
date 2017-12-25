@@ -938,7 +938,7 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     }
 
     // operation with a same sized function (matrix op)
-    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER other) 
+    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER) other) 
         if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
         return flatten().opBinary!(op)(other);
@@ -946,17 +946,9 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 
     // operation with the over params function (vector op)
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
-        if (PARAM.length > 1 && ((op=="+"||op=="-"||op=="*"||op=="/")))
+        if (PARAMS.length > 1 && ((op=="+"||op=="-"||op=="*"||op=="/")))
     {
-        RETURN_TYPE [Tuple!(PARAM)] result;
-
-        foreach (key ; mySet) {
-            auto tempKey = tuple(key[key.length - 1]);
-            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ " other[tempKey];");
-        }
-
-        
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+        return flatten().opBinary!(op)(other);
     }
 
     // operation with a single value (scalar op)
@@ -984,8 +976,39 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 
         return opBinary!(op)(scalar);
     }
-    
-    
+
+    override Distribution!(OVER) opIndex(Tuple!(PARAMS) i ) {
+        Distribution!(OVER) * p;
+        p = (i in storage);
+        if (p !is null) {
+            return *p;
+        }
+        if ( mySet !is null && ! mySet.contains(i)) {
+            throw new Exception("ERROR, key is not in the set this function is defined over.");
+        }
+        storage[i] = new Distribution!(OVER)(over_param_set);
+        return storage[i];
+    }
+
+    void opIndexOpAssign(string op)(Distribution!(OVER) rhs, Tuple!(PARAMS) key) {
+        Distribution!(OVER) * p;
+        p = (key in storage);
+        if (p is null) {
+            if ( mySet !is null && ! mySet.contains(key)) {
+                throw new Exception("ERROR, key is not in the set this function is defined over.");
+            }
+            storage[key] = new Distribution!(OVER)(over_param_set);
+            p = (key in storage);
+        }
+        _preElementModified(key);
+        mixin("*p " ~ op ~ "= rhs;");
+        _postElementModified(key);
+    }    
+
+    void opIndexOpAssign(string op)(Distribution!(OVER) rhs, PARAMS key) {
+        opIndexOpAssign!(op)(rhs, tuple(key));
+        
+    }
 }
 
 
