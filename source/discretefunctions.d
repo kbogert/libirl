@@ -886,11 +886,114 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
 }
 
 // a specialized distribution, basically a function that returns distributions
+// only need a conditional distributions over single sets right now
+class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), PARAMS) {
+
+    // need this to create distributions, for instance when accessing a param set that hasn't already been inserted
+    Set!OVER over_param_set;
+    
+    public this (Set!(PARAMS) param_set, Distribution!OVER [Tuple!(PARAMS)] init) {
+
+        if (init.length == 0) {
+            throw new Exception("Initial distribution cannot be empty");
+        }
+        auto key = init.keys()[0];
+        over_param_set = init[key].param_set();
+        
+        super(param_set, init);
+    }
+
+    public this (Set!(PARAMS) param_set, Set!(OVER) over_params) {
+        over_param_set = over_params;
+        super(param_set);
+    }
+    
+    public this (Set!(PARAMS) param_set, Set!(OVER) over_params, double [Tuple!(OVER)] [Tuple!(PARAMS)] init) {
+
+        Distribution!(OVER) [Tuple!(PARAMS)] builtDistr;
+
+        foreach(key, val ; init) {
+            builtDistr[key] = new Distribution!(OVER)(over_params, val);
+        }
+        this(param_set, builtDistr);
+        
+    }
+    
+    // converts this structured function into a flat one that doesn't have any distribution features
+    public Function!(double, PARAMS, OVER) flatten() {
+        
+        auto combined_params = param_set.cartesian_product(over_param_set);
+
+        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params);
+
+        foreach(key1; param_set) {
+            foreach(key2; over_param_set) {
+                auto fullKey = tuple(key1[], key2[]);
+
+                returnval[fullkey] = storage.get(key1, new Distribution!(OVER)(over_params))[key2];
+            }
+        }
+
+        return returnval;
+    }
+
+    // operation with a same sized function (matrix op)
+    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER other) 
+        if ((op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+        return flatten.opBinary!(op)(other);
+    }
+
+    // operation with the over params function (vector op)
+    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
+        if (PARAM.length > 1 && (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/")))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            auto tempKey = tuple(key[key.length - 1]);
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+        }
+
+        
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+
+    // operation with a single value (scalar op)
+    Function!(RETURN_TYPE, PARAMS, OVER) opBinary(string op)(double scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        RETURN_TYPE [Tuple!(PARAM)] result;
+
+        foreach (key ; mySet) {
+            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "scalar;");
+        }
+
+        
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+    }
+    
+    Function!(RETURN_TYPE, PARAMS, OVER) opBinaryRight(string op)(RETURN_TYPE scalar) 
+        if (isNumeric!(RETURN_TYPE) && (op=="+"||op=="-"||op=="*"||op=="/"))
+    {
+
+        return opBinary!(op)(scalar);
+    }
+    
+    
+}
+
+
+/*
 class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS[0..SPLIT]), PARAMS[SPLIT..PARAMS.length]) {
 
     alias OVER = PARAMS[0..SPLIT];
 
 
+
+    
     // converts this structured function into a flat one that doesn't have any distribution features
     public Function!(double, PARAMS[SPLIT..PARAMS.length], PARAMS[0..SPLIT]) flatten() {
 
@@ -953,7 +1056,7 @@ class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS
     
     
 }
-
+*/
 
 // a specialized set of params X timesteps
 class Sequence (PARAMS...) {
