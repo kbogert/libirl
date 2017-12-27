@@ -892,7 +892,7 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     // need this to create distributions, for instance when accessing a param set that hasn't already been inserted
     Set!OVER over_param_set;
     
-    public this (Set!(PARAMS) param_set, Distribution!OVER [Tuple!(PARAMS)] init) {
+    public this (Distribution!OVER [Tuple!(PARAMS)] init, Set!(PARAMS) param_set) {
 
         if (init.length == 0) {
             throw new Exception("Initial distribution cannot be empty");
@@ -903,19 +903,19 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         super(param_set, init);
     }
 
-    public this (Set!(PARAMS) param_set, Set!(OVER) over_params) {
+    public this (Set!(OVER) over_params, Set!(PARAMS) param_set) {
         over_param_set = over_params;
-        super(param_set);
+        super(param_set, new Distribution!(OVER)(over_params));
     }
     
-    public this (Set!(PARAMS) param_set, Set!(OVER) over_params, double [Tuple!(OVER)] [Tuple!(PARAMS)] init) {
+    public this (Set!(OVER) over_params, Set!(PARAMS) param_set, double [Tuple!(OVER)] [Tuple!(PARAMS)] init) {
 
         Distribution!(OVER) [Tuple!(PARAMS)] builtDistr;
 
         foreach(key, val ; init) {
             builtDistr[key] = new Distribution!(OVER)(over_params, val);
         }
-        this(param_set, builtDistr);
+        this(builtDistr, param_set);
         
     }
     
@@ -924,13 +924,13 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         
         auto combined_params = param_set.cartesian_product(over_param_set);
 
-        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params);
+        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params, 0.0);
 
         foreach(key1; param_set) {
             foreach(key2; over_param_set) {
                 auto fullKey = tuple(key1[], key2[]);
 
-                returnval[fullkey] = storage.get(key1, new Distribution!(OVER)(over_params))[key2];
+                returnval[fullKey] = storage.get(key1, new Distribution!(OVER)(over_param_set))[key2];
             }
         }
 

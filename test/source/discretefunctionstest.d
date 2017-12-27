@@ -734,4 +734,18 @@ unittest {
     }    
     
 }
+
+@name("Conditional distribution ops")
+unittest {
+
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+    testObj2Set testSet2 = new testObj2Set(size);
+        
+
+    ConditionalDistribution!(testObj2, testObj) cd = new ConditionalDistribution!(testObj2, testObj)(testSet2, testSet1);
+
     
+}    

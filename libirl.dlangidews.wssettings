@@ -7,17 +7,12 @@
         "/home/kbogert/workspace/libirl/test/source",
         "/home/kbogert/Documents/libirl/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/discretemdp.d",
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/discretefunctions.d",
     "breakpoints": [
     ],
     "bookmarks": [
     ],
     "files": [
-        {
-            "file": "/home/kbogert/Documents/libirl/test/../source/discretefunctions.d",
-            "column": 962,
-            "row": 4
-        },
         {
             "file": "/home/kbogert/Documents/libirl/test/source/gridworld.d",
             "column": 124,
@@ -40,8 +35,8 @@
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/discretefunctions.d",
-            "column": 0,
-            "row": 0
+            "column": 999,
+            "row": 67
         }
     ],
     "buildConfiguration": 2
