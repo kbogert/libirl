@@ -1,6 +1,7 @@
 module discretemdp;
 
 import mdp;
+import discretefunctions;
 import std.math;
 
 class State {
@@ -12,17 +13,43 @@ class Action {
 
 }
 
-class Model : mdp.Model {
-
-}
-
-
 class Reward {
 
 
 }
 
 
+class Model : mdp.Model {
+
+    abstract Set!(State) S();
+
+    abstract Set!(Action) A();
+
+    abstract ConditionalDistribution!(State, State, Action) T();
+
+    abstract Function!(double, State, Action) R();
+
+    abstract double gamma();
+}
+
+
 class LinearReward : Reward {
 
+}
+
+public Function!(double, State) value_iteration(Model m, double tolerance, int max_iter = int.max) {
+
+    Function!(double, State) v_next;
+    Function!(double, State) v_prev = max( m.R() );
+
+    double diff = max( v_prev );
+    int iter = 0;
+
+    while (diff > tolerance && iter < max_iter) {
+        v_next = max( m.R() + m.gamma() * sumout!(State)( m.T() * v_prev ) ) ;
+
+        diff = max ( v_next - v_prev ); 
+    }
+
+    return v_next;
 }

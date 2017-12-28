@@ -204,8 +204,7 @@ class Set(T ...) {
 } 
 
 
-
-class Function(RETURN_TYPE, PARAM ...) {
+class Function (RETURN_TYPE, PARAM ...) {
 
     RETURN_TYPE [Tuple!(PARAM)] storage;
     Set!PARAM mySet;
@@ -716,6 +715,37 @@ class Function(RETURN_TYPE, PARAM ...) {
     protected template dimOfSet(DIM) {
         enum dimOfSet = (staticIndexOf!(DIM, PARAM) != -1);
     }    
+}
+
+// convenience functions
+public auto max(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.max();
+}
+
+public auto max(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.max!(OVER)();
+}
+
+public auto sumout(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.sumout();
+}
+
+public auto sumout(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.sumout!(OVER)();
+}
+
+public auto argmax(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.argmax();
+}
+
+public auto argmax(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.argmax!(OVER)();
 }
 
 

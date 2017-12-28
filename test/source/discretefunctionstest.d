@@ -759,7 +759,7 @@ unittest {
 
     assert (results.size() == size * size, "Wrong function size produced");
     foreach (key ; testSet1.cartesian_product(testSet2)) {
-        assert(results[key] == 0.2, "Multiply on conditional distribution did not work correctly");
+        assert(results[key] == (1.0 / size * 2.0), "Multiply on conditional distribution did not work correctly");
     }
 
     Function!(double, testObj, testObj2) testFunc2 = new Function!(double, testObj, testObj2)(testSet1.cartesian_product(testSet2), 2.0);
@@ -768,6 +768,6 @@ unittest {
     
     assert (results2.size() == size * size, "Wrong function size produced");
     foreach (key ; testSet1.cartesian_product(testSet2)) {
-        assert(results2[key] == 0.2, "Multiply on conditional distribution did not work correctly");
+        assert(results2[key] == (1.0 / size * 2.0), "Multiply on conditional distribution did not work correctly");
     }    
 }    
