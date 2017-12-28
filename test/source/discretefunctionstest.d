@@ -747,5 +747,27 @@ unittest {
 
     ConditionalDistribution!(testObj2, testObj) cd = new ConditionalDistribution!(testObj2, testObj)(testSet2, testSet1);
 
+
+    foreach (key ; testSet1) {
+        cd[key] = new Distribution!(testObj2)(testSet2, DistInitType.Uniform, 10);
+    }
+
+
+    Function!(double, testObj2) testFunc = new Function!(double, testObj2)(testSet2, 2.0);
+
+    auto results = cd * testFunc;
+
+    assert (results.size() == size * size, "Wrong function size produced");
+    foreach (key ; testSet1.cartesian_product(testSet2)) {
+        assert(results[key] == 0.2, "Multiply on conditional distribution did not work correctly");
+    }
+
+    Function!(double, testObj, testObj2) testFunc2 = new Function!(double, testObj, testObj2)(testSet1.cartesian_product(testSet2), 2.0);
+
+    auto results2 = cd * testFunc2;
     
+    assert (results2.size() == size * size, "Wrong function size produced");
+    foreach (key ; testSet1.cartesian_product(testSet2)) {
+        assert(results2[key] == 0.2, "Multiply on conditional distribution did not work correctly");
+    }    
 }    

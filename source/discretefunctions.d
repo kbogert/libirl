@@ -939,14 +939,14 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 
     // operation with a same sized function (matrix op)
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER) other) 
-        if ((op=="+"||op=="-"||op=="*"||op=="/"))
+        if (PARAMS.length > 0 && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
         return flatten().opBinary!(op)(other);
     }
 
     // operation with the over params function (vector op)
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
-        if (PARAMS.length > 1 && ((op=="+"||op=="-"||op=="*"||op=="/")))
+        if (PARAMS.length > 0 && ((op=="+"||op=="-"||op=="*"||op=="/")))
     {
         return flatten().opBinary!(op)(other);
     }
@@ -990,25 +990,6 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         return storage[i];
     }
 
-    void opIndexOpAssign(string op)(Distribution!(OVER) rhs, Tuple!(PARAMS) key) {
-        Distribution!(OVER) * p;
-        p = (key in storage);
-        if (p is null) {
-            if ( mySet !is null && ! mySet.contains(key)) {
-                throw new Exception("ERROR, key is not in the set this function is defined over.");
-            }
-            storage[key] = new Distribution!(OVER)(over_param_set);
-            p = (key in storage);
-        }
-        _preElementModified(key);
-        mixin("*p " ~ op ~ "= rhs;");
-        _postElementModified(key);
-    }    
-
-    void opIndexOpAssign(string op)(Distribution!(OVER) rhs, PARAMS key) {
-        opIndexOpAssign!(op)(rhs, tuple(key));
-        
-    }
 }
 
 
