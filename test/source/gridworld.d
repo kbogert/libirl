@@ -38,6 +38,10 @@ class GridWorldState : discretemdp.State {
      override size_t toHash() @trusted nothrow {
           return x * y;
      }
+
+     override bool isTerminal() {
+        return false;
+    }
 }
 
 class GridWorldActionUp : discretemdp.Action {

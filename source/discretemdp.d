@@ -6,6 +6,8 @@ import std.math;
 
 class State {
 
+
+    abstract bool isTerminal();
 }
 
 class Action {
