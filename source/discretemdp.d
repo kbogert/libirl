@@ -35,6 +35,8 @@ class Model {
     abstract Function!(double, State, Action) R();
 
     abstract double gamma();
+
+    abstract Distribution!(State) initialStateDistribution();
 }
 
 
