@@ -15,11 +15,14 @@ class Action {
 
 class Reward {
 
+    abstract double opIndex(State s, Action a );
+
+    abstract Function!(double, State, Action) toFunction();
 
 }
 
 
-class Model : mdp.Model {
+class Model {
 
     abstract Set!(State) S();
 
