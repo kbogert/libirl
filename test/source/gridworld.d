@@ -132,6 +132,13 @@ unittest {
     }
 
     auto lr = new LinearReward(features, [1.0]);
-    
 
+    auto transitions = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
+
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), 0.98, new Distribution!(State)(states, DistInitType.Uniform));
+
+
+    auto V = value_iteration(model, 0.001);
+
+    writeln(V);
 }
