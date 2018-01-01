@@ -105,13 +105,13 @@ class BasicModel : Model {
 }
 
 
-class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
+class LinearReward : Reward {
 
     protected double [] weights;
-    protected Function!(double [], STATE_TYPE, ACTION_TYPE) features;
+    protected Function!(double [], State, Action) features;
     protected size_t size;
 
-    public this(Function!(double [], STATE_TYPE, ACTION_TYPE) f) {
+    public this(Function!(double [], State, Action) f) {
         features = f;
         foreach(key ; f.param_set()) {
             size = f[key].length;
@@ -119,7 +119,7 @@ class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
         }
     }
 
-    public this(Function!(double [], STATE_TYPE, ACTION_TYPE) f, double [] weights) {
+    public this(Function!(double [], State, Action) f, double [] weights) {
         this(f);
         setWeights(weights);
     }
@@ -139,26 +139,26 @@ class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
         weights = w;
     }
 
-    public double [] getFeatures(STATE_TYPE s, ACTION_TYPE a) {
+    public double [] getFeatures(State s, Action a) {
         return features[tuple(s, a)];
     }
 
     public override double opIndex(State s, Action a) {
-        return dotProduct(weights, getFeatures(cast(STATE_TYPE)s, cast(ACTION_TYPE)a));
+        return dotProduct(weights, getFeatures(s, a));
     }
         
-    public double opIndex(Tuple!(STATE_TYPE, ACTION_TYPE) t) {
+    public double opIndex(Tuple!(State, Action) t) {
         return dotProduct(weights, features[t]);
     }
 
     public override Function!(double, State, Action) toFunction() {
 
-        auto returnval = new Function!(double, STATE_TYPE, ACTION_TYPE)(features.param_set(), 0.0);
+        auto returnval = new Function!(double, State, Action)(features.param_set(), 0.0);
 
         foreach (key; features.param_set()) {
             returnval[key] = opIndex(key);
         }
 
-        return cast( Function!(double, State, Action)) returnval;
+        return  returnval;
     }
 }

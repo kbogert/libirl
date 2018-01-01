@@ -77,36 +77,33 @@ class GridWorldAction : discretemdp.Action {
 }
 
 
-class GridWorldStateSpace : discretefunctions.Set!(GridWorldState) {
+class GridWorldStateSpace : discretefunctions.Set!(State) {
 
 
     public this(int sizeX, int sizeY) {
-        Tuple!(GridWorldState) [] tempArr;
+        Tuple!(State) [] tempArr;
         for (int i = 0; i < sizeX; i ++) {
             for (int j = 0; j < sizeY; j ++) {
-                tempArr ~= tuple(new GridWorldState(i, j));
+                tempArr ~= tuple(cast(State)new GridWorldState(i, j));
             }
         } 
 
         super(tempArr);
     }
 
-    public this(Set!(GridWorldState) toCopy) {
-        super(toCopy.storage.dup);
-    }
 }
 
 
-class GridWorldActionSpace : discretefunctions.Set!(GridWorldAction) {
+class GridWorldActionSpace : discretefunctions.Set!(Action) {
 
     public this() {
 
-        Tuple!(GridWorldAction) [] tempArr;
+        Tuple!(Action) [] tempArr;
 
-        tempArr ~= tuple(new GridWorldAction(1, 0));
-        tempArr ~= tuple(new GridWorldAction(-1, 0));
-        tempArr ~= tuple(new GridWorldAction(0, -1));
-        tempArr ~= tuple(new GridWorldAction(0, 1));
+        tempArr ~= tuple(cast(Action)new GridWorldAction(1, 0));
+        tempArr ~= tuple(cast(Action)new GridWorldAction(-1, 0));
+        tempArr ~= tuple(cast(Action)new GridWorldAction(0, -1));
+        tempArr ~= tuple(cast(Action)new GridWorldAction(0, 1));
         
         
         super(tempArr);
@@ -128,13 +125,13 @@ unittest {
     GridWorldStateSpace states = new GridWorldStateSpace(sizeX, sizeY);
     GridWorldActionSpace actions = new GridWorldActionSpace();
 
-    Function!(double [], GridWorldState, GridWorldAction) features = new Function!(double [], GridWorldState, GridWorldAction)(states.cartesian_product(actions), [0]);
+    Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), [0]);
 
     foreach (a ; actions) {
         features[ new GridWorldState(9,9) , a[0] ] = [1.0];
     }
 
-    auto lr = new LinearReward!(GridWorldState, GridWorldAction)(features, [1.0]);
+    auto lr = new LinearReward(features, [1.0]);
     
 
 }
