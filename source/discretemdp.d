@@ -143,19 +143,15 @@ class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
         return features[tuple(s, a)];
     }
 
-    public double opIndex(STATE_TYPE s, ACTION_TYPE a) {
-        return dotProduct(weights, getFeatures(s, a));
-    }
-
     public override double opIndex(State s, Action a) {
-        return 0;
+        return dotProduct(weights, getFeatures(cast(STATE_TYPE)s, cast(ACTION_TYPE)a));
     }
         
     public double opIndex(Tuple!(STATE_TYPE, ACTION_TYPE) t) {
         return dotProduct(weights, features[t]);
     }
 
-    public Function!(double, STATE_TYPE, ACTION_TYPE) toFunction() {
+    public override Function!(double, State, Action) toFunction() {
 
         auto returnval = new Function!(double, STATE_TYPE, ACTION_TYPE)(features.param_set(), 0.0);
 
@@ -163,10 +159,6 @@ class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
             returnval[key] = opIndex(key);
         }
 
-        return returnval;
-    }
-
-    public override Function!(double, State, Action) toFunction() {
-        return null;
+        return cast( Function!(double, State, Action)) returnval;
     }
 }
