@@ -133,13 +133,6 @@ class GridWorldModel : discretemdp.Model {
 
 }
 
-class GridWorldReward : discretemdp.LinearReward {
-
-        Distribution!State uniform;
-
-}
-
-
 import tested;
 
 @name("arithmetic")
