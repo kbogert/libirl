@@ -44,41 +44,37 @@ class GridWorldState : discretemdp.State {
     }
 }
 
-class GridWorldActionUp : discretemdp.Action {
+class GridWorldAction : discretemdp.Action {
 
-     public GridWorldState intendedNextState(GridWorldState s) {
-           return new GridWorldState(s.getX(), s.getY() - 1);
+    int xMod;
+    int yMod;
 
-     }
+    public this (int x, int y) {
+        xMod = x;
+        yMod = y;
+    }
+
+    public GridWorldState apply(GridWorldState start) {
+        return new GridWorldState(start.getX() + xMod, start.getY() + yMod);
+    }
+    
+    public override string toString() {
+        return "Action: " ~ to!string(xMod) ~ " x " ~ to!string(yMod);
+    }
+
+    override bool opEquals(Object o) {
+        auto rhs = cast(GridWorldAction)o;
+        if (!rhs) return false;
+
+        return xMod == rhs.xMod && yMod == rhs.yMod;
+    }
+
+    override size_t toHash() @trusted nothrow {
+        return xMod * yMod;
+    }
+    
+    
 }
-
-class GridWorldActionDown : discretemdp.Action {
-
-     public GridWorldState intendedNextState(GridWorldState s) {
-           return new GridWorldState(s.getX(), s.getY() + 1);
-
-     }
-
-}
-
-class GridWorldActionLeft : discretemdp.Action {
-
-     public GridWorldState intendedNextState(GridWorldState s) {
-           return new GridWorldState(s.getX() - 1, s.getY());
-
-     }
-
-}
-
-class GridWorldActionRight : discretemdp.Action {
-
-     public GridWorldState intendedNextState(GridWorldState s) {
-           return new GridWorldState(s.getX() + 1, s.getY());
-
-     }
-
-}
-
 
 
 class GridWorldStateSpace : discretefunctions.Set!(GridWorldState) {
@@ -101,16 +97,16 @@ class GridWorldStateSpace : discretefunctions.Set!(GridWorldState) {
 }
 
 
-class GridWorldActionSpace : discretefunctions.Set!(Action) {
+class GridWorldActionSpace : discretefunctions.Set!(GridWorldAction) {
 
     public this() {
 
-        Tuple!(Action) [] tempArr;
+        Tuple!(GridWorldAction) [] tempArr;
 
-        tempArr ~= tuple(cast(Action)new GridWorldActionUp());
-        tempArr ~= tuple(cast(Action)new GridWorldActionDown());
-        tempArr ~= tuple(cast(Action)new GridWorldActionLeft());
-        tempArr ~= tuple(cast(Action)new GridWorldActionRight());
+        tempArr ~= tuple(new GridWorldAction(1, 0));
+        tempArr ~= tuple(new GridWorldAction(-1, 0));
+        tempArr ~= tuple(new GridWorldAction(0, -1));
+        tempArr ~= tuple(new GridWorldAction(0, 1));
         
         
         super(tempArr);
@@ -120,27 +116,25 @@ class GridWorldActionSpace : discretefunctions.Set!(Action) {
 }
 
 
-class GridWorldModel : discretemdp.Model {
-
-
-     public this(int xSpace, int ySpace, double transitionProb) {
-
-
-          // how to connect the transitions with the state and action objects?
-          // easiest thing to do is just have states store their location, and actions store their effect
-          // need the ability to print out states and actions
-     }
-
-}
-
 import tested;
+import std.stdio;
 
-@name("arithmetic")
+@name("Gridworld building")
 unittest {
-        int i = 3;
-        assert(i == 3);
-        i *= 2;
-        assert(i == 6);
-        i += 5;
-        assert(i == 11);
+
+    int sizeX = 10;
+    int sizeY = 10;
+
+    GridWorldStateSpace states = new GridWorldStateSpace(sizeX, sizeY);
+    GridWorldActionSpace actions = new GridWorldActionSpace();
+
+    Function!(double [], GridWorldState, GridWorldAction) features = new Function!(double [], GridWorldState, GridWorldAction)(states.cartesian_product(actions), [0]);
+
+    foreach (a ; actions) {
+        features[ new GridWorldState(9,9) , a[0] ] = [1.0];
+    }
+
+    auto lr = new LinearReward!(GridWorldState, GridWorldAction)(features, [1.0]);
+    
+
 }

@@ -105,13 +105,13 @@ class BasicModel : Model {
 }
 
 
-class LinearReward : Reward {
+class LinearReward (STATE_TYPE : State, ACTION_TYPE : Action) : Reward {
 
     protected double [] weights;
-    protected Function!(double [], State, Action) features;
+    protected Function!(double [], STATE_TYPE, ACTION_TYPE) features;
     protected size_t size;
 
-    public this(Function!(double [], State, Action) f) {
+    public this(Function!(double [], STATE_TYPE, ACTION_TYPE) f) {
         features = f;
         foreach(key ; f.param_set()) {
             size = f[key].length;
@@ -119,7 +119,7 @@ class LinearReward : Reward {
         }
     }
 
-    public this(Function!(double [], State, Action) f, double [] weights) {
+    public this(Function!(double [], STATE_TYPE, ACTION_TYPE) f, double [] weights) {
         this(f);
         setWeights(weights);
     }
@@ -139,21 +139,25 @@ class LinearReward : Reward {
         weights = w;
     }
 
-    public double [] getFeatures(State s, Action a) {
+    public double [] getFeatures(STATE_TYPE s, ACTION_TYPE a) {
         return features[tuple(s, a)];
     }
 
-    public override double opIndex(State s, Action a) {
+    public double opIndex(STATE_TYPE s, ACTION_TYPE a) {
         return dotProduct(weights, getFeatures(s, a));
     }
 
-    public double opIndex(Tuple!(State, Action) t) {
+    public override double opIndex(State s, Action a) {
+        return 0;
+    }
+        
+    public double opIndex(Tuple!(STATE_TYPE, ACTION_TYPE) t) {
         return dotProduct(weights, features[t]);
     }
 
-    public override Function!(double, State, Action) toFunction() {
+    public Function!(double, STATE_TYPE, ACTION_TYPE) toFunction() {
 
-        auto returnval = new Function!(double, State, Action)(features.param_set(), 0.0);
+        auto returnval = new Function!(double, STATE_TYPE, ACTION_TYPE)(features.param_set(), 0.0);
 
         foreach (key; features.param_set()) {
             returnval[key] = opIndex(key);
@@ -162,4 +166,7 @@ class LinearReward : Reward {
         return returnval;
     }
 
+    public override Function!(double, State, Action) toFunction() {
+        return null;
+    }
 }
