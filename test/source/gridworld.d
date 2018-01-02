@@ -116,7 +116,7 @@ class GridWorldActionSpace : discretefunctions.Set!(Action) {
 import tested;
 import std.stdio;
 
-@name("Gridworld building")
+@name("Deterministic Gridworld building")
 unittest {
 
     int sizeX = 10;
@@ -135,10 +135,37 @@ unittest {
 
     auto transitions = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), 0.98, new Distribution!(State)(states, DistInitType.Uniform));
+    foreach (s ; states) {
+        foreach (a ; actions) {
+
+            auto newState = (cast(GridWorldAction)a[0]).apply(cast(GridWorldState)s[0]);
+
+            Distribution!State ds = new Distribution!(State)(states, 0.0);
+
+            if (states.contains(cast(State)newState)) {
+                ds[newState] = 1.0;
+            } else {
+                ds[s[0]] = 1.0;
+            }
+
+            ds.normalize();
+            
+            transitions[s[0], a[0]] = ds;
+        }
+    }
+
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), 0.95, new Distribution!(State)(states, DistInitType.Uniform));
+
+    auto V = value_iteration(model, 0.1);
+
+//    writeln(V);
+}
 
 
-    auto V = value_iteration(model, 0.001);
+@name("Gridworld simulation with terminal state")
+unittest {
+}
 
-    writeln(V);
+@name("Gridworld simulation with non-terminal state")
+unittest {
 }

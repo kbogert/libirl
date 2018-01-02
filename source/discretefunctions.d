@@ -29,6 +29,10 @@ class Set(T ...) {
          return false;
     }
 
+    public bool contains(T i) {
+        return contains(tuple(i));
+    }
+
     public Tuple!(T) [] toArray() {
         return storage.dup;
     }
@@ -307,7 +311,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
     }
 
     // operation with a single param function (vector op)
@@ -323,7 +327,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
     }
 
     // operation with a single value (scalar op)
@@ -338,7 +342,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
     }
     
     Function!(RETURN_TYPE, PARAM) opBinaryRight(string op)(RETURN_TYPE scalar) 
@@ -662,9 +666,8 @@ class Function (RETURN_TYPE, PARAM ...) {
                 }
                 
             }
-            
 
-            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, sum);
+            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, sum.rehash);
             
         }       
 
@@ -951,20 +954,29 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     
     // converts this structured function into a flat one that doesn't have any distribution features
     public Function!(double, PARAMS, OVER) flatten() {
-        
+
         auto combined_params = param_set.cartesian_product(over_param_set);
 
-        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params, 0.0);
 
+        double [Tuple!(PARAMS, OVER)] tempArray;
+        
         foreach(key1; param_set) {
-            foreach(key2; over_param_set) {
-                auto fullKey = tuple(key1[], key2[]);
+            Distribution!(OVER)* p;
+            p = (key1 in storage);
+            if (p ! is null) {
+                foreach(key2; over_param_set) {
+                    auto fullKey = tuple(key1[], key2[]);
 
-                returnval[fullKey] = storage.get(key1, new Distribution!(OVER)(over_param_set))[key2];
+//                    tempArray[fullKey] = 0.0;
+//                } else {
+                    auto element = (*p)[key2];
+                    if (element != 0.0)
+                       tempArray[fullKey] = element;
+                }
             }
         }
 
-        return returnval;
+        return new Function!(double, PARAMS, OVER)(combined_params, tempArray.rehash, 0.0);
     }
 
     // operation with a same sized function (matrix op)
