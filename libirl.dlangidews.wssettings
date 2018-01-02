@@ -7,32 +7,27 @@
         "/home/kbogert/workspace/libirl/test/source",
         "/home/kbogert/Documents/libirl/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/test/source/gridworld.d",
+    "selectedWorkspaceItem": "/home/kbogert/workspace/libirl/source/discretemdp.d",
     "breakpoints": [
     ],
     "bookmarks": [
     ],
     "files": [
         {
-            "file": "/home/kbogert/Documents/libirl/source/mdp.d",
-            "column": 1,
+            "file": "/home/kbogert/workspace/libirl/test/source/gridworld.d",
+            "column": 6,
+            "row": 10
+        },
+        {
+            "file": "/home/kbogert/workspace/libirl/source/discretemdp.d",
+            "column": 70,
             "row": 0
         },
         {
-            "file": "/home/kbogert/Documents/libirl/test/source/gridworld.d",
-            "column": 42,
-            "row": 23
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/test/../source/discretemdp.d",
-            "column": 32,
-            "row": 50
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/test/../source/discretefunctions.d",
-            "column": 234,
+            "file": "/home/kbogert/workspace/libirl/source/discretefunctions.d",
+            "column": 825,
             "row": 0
         }
     ],
-    "buildConfiguration": 2
+    "buildConfiguration": 1
 }

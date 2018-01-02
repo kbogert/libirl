@@ -158,7 +158,7 @@ unittest {
 
     auto V = value_iteration(model, 0.1);
 
-//    writeln(V);
+    writeln(V);
 }
 
 

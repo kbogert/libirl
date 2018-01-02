@@ -1,5 +1,13 @@
 {
 "name": "libirl-test",
+"buildTypes" : {
+        "profile": {
+                "buildOptions" : ["profile", "unittests", "optimize", "inline", "debugInfo"]
+        },
+        "release": {
+                "buildOptions" : ["releaseMode", "unittests", "optimize", "inline", "noBoundsCheck"]
+        }
+},
 "description": "A minimal D application.",
 "copyright": "Copyright © 2017, kbogert",
 "authors": ["kbogert"],

@@ -311,7 +311,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
     }
 
     // operation with a single param function (vector op)
@@ -323,11 +323,14 @@ class Function (RETURN_TYPE, PARAM ...) {
 
         foreach (key ; mySet) {
             auto tempKey = tuple(key[key.length - 1]);
-            mixin("result[key] = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+            mixin("auto tempResult = storage.get(key, funct_default) " ~ op ~ "other[tempKey];");
+            if (tempResult != funct_default) {
+                result[key] = tempResult;
+            }
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result, funct_default);
     }
 
     // operation with a single value (scalar op)
@@ -342,7 +345,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         }
 
         
-        return new Function!(RETURN_TYPE, PARAM)(mySet, result.rehash);
+        return new Function!(RETURN_TYPE, PARAM)(mySet, result);
     }
     
     Function!(RETURN_TYPE, PARAM) opBinaryRight(string op)(RETURN_TYPE scalar) 
@@ -667,7 +670,7 @@ class Function (RETURN_TYPE, PARAM ...) {
                 
             }
 
-            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, sum.rehash);
+            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, sum);
             
         }       
 
@@ -811,7 +814,7 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
 
             }
 
-            arr.rehash();
+            // arr = arr.rehash();
 
             super(s, arr);
 
@@ -914,7 +917,7 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
             }
         }
 
-        storage.rehash();
+        //storage = storage.rehash();
     }
 }
 
@@ -976,7 +979,7 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
             }
         }
 
-        return new Function!(double, PARAMS, OVER)(combined_params, tempArray.rehash, 0.0);
+        return new Function!(double, PARAMS, OVER)(combined_params, tempArray, 0.0);
     }
 
     // operation with a same sized function (matrix op)

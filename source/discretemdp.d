@@ -42,37 +42,22 @@ class Model {
     abstract Distribution!(State) initialStateDistribution();
 }
 
-        import std.stdio;
 
 public Function!(double, State) value_iteration(Model m, double tolerance, int max_iter = int.max) {
 
     Function!(double, State) v_next;
     Function!(double, State) v_prev = max( m.R() );
-
+    auto T = m.T().flatten();
+    
     double diff = max( v_prev );
     int iter = 0;
 
-    writeln(v_prev);
     while (diff > tolerance && iter < max_iter) {
         
-        v_next = max( m.R() + m.gamma() * sumout!(State)( m.T() * v_prev ) ) ;
+        v_next = max( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
-/*        writeln("Here0");
-        auto part1 = m.T() * v_prev;
-        writeln("Here1");
-        auto part2 = sumout!(State)(part1);
-        writeln("Here2");
-        auto part3 = m.gamma() * part2;
-        writeln("Here3");
-        auto part4 = m.R() + part3;
-        writeln("Here4");
-        v_next = max(part4);
-        writeln("Here5");
-*/        
         diff = max ( v_next - v_prev ); 
         v_prev = v_next;
-        
-        writeln(to!string(diff));
     }
 
     return v_next;
