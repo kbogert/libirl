@@ -576,7 +576,7 @@ class Function (RETURN_TYPE, PARAM ...) {
                 static if (I < 0) {
                     const char[] MapTuplePositive = "";
                 
-                } else static if (J >= 0 && is(SUBPARAM[J] == PARAM[I])) {
+                } else static if (J >= 0 && is(TOREMOVE[J] == PARAM[I])) {
                     static if (K > 0) {
                         const char[] MapTuplePositive =  MapTuplePositive!(I-1, J-1, K+1) ~ "combinedkey["~to!string(I)~"], ";
                     } else {
@@ -593,8 +593,8 @@ class Function (RETURN_TYPE, PARAM ...) {
 
                 RETURN_TYPE val = storage.get(combinedkey, funct_default);
                 
-                auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
-                auto return_key = mixin( "tuple(" ~ MapTuplePositive!(PARAM.length - 1, SUBPARAM.length - 1, 0) ~ ")" );
+                Tuple!(SUBPARAM) key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
+                Tuple!(TOREMOVE) return_key = mixin( "tuple(" ~ MapTuplePositive!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
 
                 RETURN_TYPE* p;
                 p = (key in max);
