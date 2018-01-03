@@ -52,7 +52,7 @@ public Function!(double, State) value_iteration(Model m, double tolerance, int m
     double diff = max( v_prev );
     int iter = 0;
 
-    while (diff > tolerance && iter < max_iter) {
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
         
         v_next = max( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
@@ -63,6 +63,27 @@ public Function!(double, State) value_iteration(Model m, double tolerance, int m
     return v_next;
 }
 
+public Function!(double, State, Action) q_value_iteration(Model m, double tolerance, int max_iter = int.max) {
+
+    return sumout!(State) (m.T() * value_iteration(m, tolerance, max_iter) );
+}
+
+public Function!(Tuple!(Action), State) optimum_policy (Function!(double, State) V, Model m) {
+
+    return argmax( sumout!(State)( m.T() * V ) );
+
+}
+
+public Function!(Tuple!(Action), State) optimum_policy (Function!(double, State, Action) Q) {
+
+    return argmax( Q );
+
+}
+
+public Function!(Tuple!(Action), State) optimum_policy (Model m, double tolerance, int max_iter = int.max) {
+
+    return argmax (q_value_iteration (m, tolerance, max_iter) );
+}
 
 class BasicModel : Model {
 

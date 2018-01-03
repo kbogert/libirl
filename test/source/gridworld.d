@@ -156,9 +156,9 @@ unittest {
 
     auto model = new BasicModel(states, actions, transitions, lr.toFunction(), 0.95, new Distribution!(State)(states, DistInitType.Uniform));
 
-    auto V = value_iteration(model, 0.1);
+    auto V = value_iteration(model, 0.1 * max ( max( lr.toFunction())) );
 
-    writeln(V);
+    writeln(optimum_policy(V, model));
 }
 
 
