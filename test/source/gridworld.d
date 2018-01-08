@@ -158,7 +158,7 @@ unittest {
 
     auto V = value_iteration(model, 0.001 * max ( max( lr.toFunction())) );
 
-    writeln(optimum_policy(V, model));
+    writeln(simulate(model, to_stochastic_policy(optimum_policy(V, model), actions), 15, model.initialStateDistribution()  ));
 }
 
 

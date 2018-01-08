@@ -86,10 +86,46 @@ public Function!(Tuple!(Action), State) optimum_policy (Model m, double toleranc
 }
 
 
-public Sequence!(State, Action) simulate(Model m, int timesteps, Distribution!(State) initialStates) {
+public ConditionalDistribution!(Action, State) to_stochastic_policy(Function!(Tuple!(Action), State) policy, Set!Action action_set) {
 
-    return null;
+        auto returnval = new ConditionalDistribution!(Action, State)(action_set, policy.param_set());
+
+        foreach( s ; policy.param_set()) {
+
+            auto d = new Distribution!(Action)(action_set);
+
+            d [ policy [s[0]] ] = 1.0;
+
+            returnval[ s[0] ] = d;
+        }
+
+        return returnval;    
+}
+
+public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Action, State) stochastic_policy, int timesteps, Distribution!(State) initialStates) {
+
+    auto s = initialStates.sample();
+
+    auto returnval = new Sequence!(State, Action)(timesteps);
+
+    size_t cur_timestep = 0;
+
+    while (cur_timestep < timesteps) {
+
+        auto a = stochastic_policy[s].sample();
+
+        auto sa = tuple(s[0], a[0]);
+
+        returnval[cur_timestep] = sa;
+
+        s = m.T()[ sa ].sample();
+        
+        cur_timestep ++;
+    }
     
+    
+    return returnval;
+
 }
 
 

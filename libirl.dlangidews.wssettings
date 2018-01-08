@@ -7,7 +7,7 @@
         "/home/kbogert/workspace/libirl/test/source",
         "/home/kbogert/Documents/libirl/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/workspace/libirl/source/discretemdp.d",
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/discretemdp.d",
     "breakpoints": [
     ],
     "bookmarks": [
@@ -29,5 +29,5 @@
             "row": 0
         }
     ],
-    "buildConfiguration": 1
+    "buildConfiguration": 2
 }

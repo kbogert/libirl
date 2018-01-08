@@ -1114,16 +1114,16 @@ class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS
 class Sequence (PARAMS...) {
 
     Tuple!(PARAMS) [] timesteps;
-    size_t cur_length;
 
     public this(Tuple!(PARAMS) [] t) {
-
         timesteps = t;
-        cur_length = t.length;
     }
 
     public this() {
-        cur_length = 0;
+    }
+
+    public this(size_t size) {
+        timesteps.length = size;
     }
 
     
@@ -1151,7 +1151,6 @@ class Sequence (PARAMS...) {
     }
 
     void opIndexAssign(Tuple!(PARAMS) value, size_t i) {
-        // DO I NEED TO ENFORCE sizes here?
           timesteps[i] = value;
     }
 
@@ -1161,7 +1160,6 @@ class Sequence (PARAMS...) {
     {
 
         timesteps ~= addition;
-        cur_length ++;        
     }
 
     public void opOpAssign(string op)(Sequence!Params addition) 
@@ -1169,7 +1167,6 @@ class Sequence (PARAMS...) {
     {
 
         timesteps ~= addition.timesteps;
-        cur_length += addition.cur_length;        
     }
 
     public Sequence!(PARAMS) opBinary(string op)(Tuple!(PARAMS) other) 
@@ -1215,12 +1212,25 @@ class Sequence (PARAMS...) {
 
     
     size_t opDollar(size_t pos)() {
-        return cur_length;
+        return timesteps.length;
     }
 
     size_t length() {
-        return cur_length;
+        return timesteps.length;
     }        
 
+    override string toString() {
+
+        string returnval = "";
+
+        foreach (timestep ; timesteps) {
+
+            
+            returnval ~= "( " ~ to!string(timestep[0]) ~ " => " ~ to!string(timestep[1]) ~ " ), ";
+        }
+        
+        return returnval;
+    }
+    
 
 }
