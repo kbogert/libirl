@@ -1219,6 +1219,10 @@ class Sequence (PARAMS...) {
         return timesteps.length;
     }        
 
+    public void setLength(size_t l) {
+        timesteps.length = l;
+    }
+    
     override string toString() {
 
         string returnval = "";

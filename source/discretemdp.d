@@ -112,6 +112,14 @@ public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Actio
 
     while (cur_timestep < timesteps) {
 
+        if (s[0].isTerminal()) {
+
+            returnval[cur_timestep] = tuple!(State, Action)(s[0], null);
+            returnval.setLength(cur_timestep + 1);
+            break;
+            
+        }
+        
         auto a = stochastic_policy[s].sample();
 
         auto sa = tuple(s[0], a[0]);
