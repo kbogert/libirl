@@ -1114,9 +1114,113 @@ class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS
 class Sequence (PARAMS...) {
 
     Tuple!(PARAMS) [] timesteps;
+    size_t cur_length;
+
+    public this(Tuple!(PARAMS) [] t) {
+
+        timesteps = t;
+        cur_length = t.length;
+    }
+
+    public this() {
+        cur_length = 0;
+    }
 
     
+    public Tuple!(PARAMS) opIndex(size_t idx) {
+
+        return timesteps[idx];        
+    }
+
+    public Tuple!(PARAMS) [] opIndex() {
+        return timesteps[];
+    }
+
+    // slicing support
+    public Sequence!(PARAMS) opIndex(size_t[2] start) {
+
+        return new Sequence( timesteps[start[0] .. start[1]].dup );
+    }
+
+    public size_t[2] opSlice(size_t dim)(size_t start, size_t end) 
+        if (dim == 0)
+    in { assert(start >= 0 && end <= this.opDollar!dim); }
+    body
+    {
+        return [start, end];
+    }
+
+    void opIndexAssign(Tuple!(PARAMS) value, size_t i) {
+        // DO I NEED TO ENFORCE sizes here?
+          timesteps[i] = value;
+    }
+
+
+    public void opOpAssign(string op)(Tuple!(PARAMS) addition) 
+        if (op == "~=")
+    {
+
+        timesteps ~= addition;
+        cur_length ++;        
+    }
+
+    public void opOpAssign(string op)(Sequence!Params addition) 
+        if (op == "~=")
+    {
+
+        timesteps ~= addition.timesteps;
+        cur_length += addition.cur_length;        
+    }
+
+    public Sequence!(PARAMS) opBinary(string op)(Tuple!(PARAMS) other) 
+        if (op == "~" )
+    {
+
+        auto temp = timesteps.dup;
+        temp ~= other;
+        
+        return new Sequence!(PARAMS)( temp );
+    }
+
+    public Sequence!(PARAMS) opBinary(string op)(Sequence!(PARAMS) other) 
+        if (op == "~" )
+    {
+
+        auto temp = timesteps.dup;
+        temp ~= other.timesteps.dup;
+        
+        return new Sequence!(PARAMS)( temp );
+    }
+        
+    public int opApply(scope int delegate(ref size_t, ref Tuple!(PARAMS)) dg) {
+        int result = 0;
+        foreach (key, value ; timesteps) {
+            result = dg(key, value);
+            if (result) break;
+
+        }
+        return result;
+    }
+            
+    public int opApply(scope int delegate(ref Tuple!(PARAMS)) dg) {
+        int result = 0;
+        foreach (value ; timesteps) {
+            result = dg(value);
+            if (result) break;
+
+        }
+        return result;
+    }
     
+
     
+    size_t opDollar(size_t pos)() {
+        return cur_length;
+    }
+
+    size_t length() {
+        return cur_length;
+    }        
+
 
 }

@@ -85,6 +85,14 @@ public Function!(Tuple!(Action), State) optimum_policy (Model m, double toleranc
     return argmax (q_value_iteration (m, tolerance, max_iter) );
 }
 
+
+public Sequence!(State, Action) simulate(Model m, int timesteps, Distribution!(State) initialStates) {
+
+    return null;
+    
+}
+
+
 class BasicModel : Model {
 
     protected Set!(State) states;
