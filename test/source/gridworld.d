@@ -55,10 +55,6 @@ class GridWorldAction : discretemdp.Action {
         xMod = x;
         yMod = y;
     }
-
-    public GridWorldState apply(GridWorldState start) {
-        return new GridWorldState(start.getX() + xMod, start.getY() + yMod);
-    }
     
     public override string toString() {
         return "Action: " ~ to!string(xMod) ~ " x " ~ to!string(yMod);
@@ -74,7 +70,15 @@ class GridWorldAction : discretemdp.Action {
     override size_t toHash() @trusted nothrow {
         return xMod * yMod;
     }
-    
+
+    override GridWorldState getIdealStateFor(State s) {
+        auto state = cast(GridWorldState)s;
+
+        if (!state)
+            return null;
+
+        return new GridWorldState(state.getX() + xMod, state.getY() + yMod);
+    }
     
 }
 
@@ -145,7 +149,7 @@ unittest {
     foreach (s ; states) {
         foreach (a ; actions) {
 
-            auto newState = (cast(GridWorldAction)a[0]).apply(cast(GridWorldState)s[0]);
+            auto newState = (cast(GridWorldAction)a[0]).getIdealStateFor(cast(GridWorldState)s[0]);
 
             Distribution!State ds = new Distribution!(State)(states, 0.0);
 
@@ -223,7 +227,7 @@ unittest {
     foreach (s ; states) {
         foreach (a ; actions) {
 
-            auto newState = (cast(GridWorldAction)a[0]).apply(cast(GridWorldState)s[0]);
+            auto newState = (cast(GridWorldAction)a[0]).getIdealStateFor(cast(GridWorldState)s[0]);
 
             Distribution!State ds = new Distribution!(State)(states, 0.0);
 
@@ -297,7 +301,7 @@ unittest {
 
         foreach (a ; actions) {
 
-            auto newState = (cast(GridWorldAction)a[0]).apply(cast(GridWorldState)s[0]);
+            auto newState = (cast(GridWorldAction)a[0]).getIdealStateFor(cast(GridWorldState)s[0]);
 
             Distribution!State ds = new Distribution!(State)(states, 0.0);
 
@@ -338,3 +342,73 @@ unittest {
     }
         
 }
+
+
+
+@name("Deterministic Transition function test")
+unittest {
+
+    int sizeX = 10;
+    int sizeY = 10;
+    double gamma = 0.95;
+    double value_error = 0.001;
+    double idealStateTransitionProb = 1.0;
+
+    auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
+    auto optimal_action = new GridWorldAction(1, 0) ;    
+
+    GridWorldStateSpace states = new GridWorldStateSpace(sizeX, sizeY);
+    GridWorldActionSpace actions = new GridWorldActionSpace();
+
+    Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), [0]);
+
+    foreach (a ; actions) {
+        features[ optimal_state , a[0] ] = [1.0];
+    }
+
+    auto lr = new LinearReward(features, [1.0]);
+
+    auto transitions = build_simple_transition_function(states, actions, idealStateTransitionProb, & otherActionsErrorFunction);
+
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+
+    auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
+
+    double optimal_value = 0;
+
+
+    foreach (i ; 0 .. 10000) {
+        optimal_value += pow(gamma, i) * lr[optimal_state, optimal_action];
+    }
+
+    assert( abs (V[optimal_state] - optimal_value) <= value_error, "Incorrect optimal value, " ~ to!string(V[optimal_state]) ~ " correct: " ~ to!string(optimal_value) );
+
+    
+    foreach (i ; 0 .. (sizeX * sizeY) ) {
+        auto trajectory = simulate(model, to_stochastic_policy(optimum_policy(V, model), actions), sizeX + sizeY, model.initialStateDistribution()  );
+
+
+        assert(trajectory[$][0] == optimal_state, "Agent did not reach the optimal state");
+    }
+    
+    version(fullunittest) {
+    
+        // increase accuracy (decrease error)
+
+        gamma = 0.99;
+        value_error = 0.0001;
+
+        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
+
+        optimal_value = 0;
+        foreach (i ; 0 .. 10000) {
+            optimal_value += pow(gamma, i) * lr[optimal_state, optimal_action];
+        }
+
+        assert( abs (V[optimal_state] - optimal_value) <= value_error, "Incorrect optimal value 2, " ~ to!string(V[optimal_state]) ~ " correct: " ~ to!string(optimal_value) );
+    
+    }
+        
+}
+

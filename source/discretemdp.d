@@ -6,6 +6,7 @@ import std.math;
 import std.typecons;
 import std.numeric;
 import std.conv;
+import std.algorithm.comparison;
 
 class State {
 
@@ -15,6 +16,7 @@ class State {
 
 class Action {
 
+    abstract State getIdealStateFor (State s);
 
 }
 
@@ -134,6 +136,131 @@ public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Actio
     
     return returnval;
 
+}
+
+public ConditionalDistribution!(State, State, Action) build_simple_transition_function(Set!(State) states, Set!(Action) actions, double ideal_state_prob, Function!(double, State) function (Set!(State) all_states, Set!(Action) all_actions, State state, Action action, State ideal_state, double remaining_prob_mass ) error_function, bool zero_out_terminal_transitions = false ) {
+
+    ideal_state_prob = min(1.0, max(0.0, ideal_state_prob)) ;
+
+
+    auto returnval = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
+
+    foreach ( s ; states) {
+
+        // handle reaching a terminal state 
+        if (s[0].isTerminal()) {
+
+            foreach ( a ; actions ) {
+                // terminals really actually terminate execution, no transitions from them
+                if (zero_out_terminal_transitions) {
+
+                    returnval[tuple( s[0], a[0])] = new Distribution!(State)(states, 0.0);
+                
+                } else {
+                    // terminals are black holes, once in them the agent cannot escape
+
+                    auto temp = new Distribution!(State)(states, 0.0);
+
+                    temp[tuple(s[0])] = 1.0;
+                    
+                    returnval[tuple( s[0], a[0])] = temp;
+                
+                }
+
+            }
+
+            continue;
+        }
+
+
+
+        foreach ( a ; actions ) {
+
+            auto total_transitions = new Function!(double, State)(states, 0.0);
+
+
+            // ideal state
+            
+            auto ideal_state = a[0].getIdealStateFor( s[0] );
+
+            if ( ! states.contains(ideal_state) ) {
+                ideal_state = s[0];
+            }
+
+            total_transitions[tuple(ideal_state)] = ideal_state_prob;
+
+            // distribute leftover prob mass according to error function
+
+            total_transitions = total_transitions + error_function(states, actions, s[0], a[0], ideal_state, 1.0 - ideal_state_prob);
+
+            auto totalMass = sumout( total_transitions );
+
+
+            
+            if (totalMass < 1.0) {
+                // we've still got some prob mass left, distribute to all states
+
+                foreach (s_prime ; states) {
+
+                    total_transitions[tuple(s_prime[0])] += (1.0 - totalMass) / states.size();
+                }
+                
+            
+            }
+
+
+            returnval[tuple(s[0], a[0])] = new Distribution!(State)(total_transitions);
+            
+        }
+
+    }
+
+    return returnval;
+}
+
+// distribute the remaining probability mass equally among the ideal states for all other actions
+Function!(double, State) otherActionsErrorFunction (Set!(State) allStates, Set!(Action) allActions, State state, Action action, State ideal_state, double remainingProbMass ) {
+
+    auto returnval = new Function!(double, State)(allStates, 0.0); 
+
+    auto amount = remainingProbMass / (allActions.size() - 1);
+    
+    foreach( a ; allActions ) {
+
+        if (a[0] != action) {
+
+            auto nextState = a[0].getIdealStateFor( state );
+
+            if ( ! allStates.contains(nextState) ) {
+                nextState = state;
+            }
+
+            returnval[tuple(nextState)] += amount;
+        }
+                
+    }    
+
+    return returnval;
+}
+
+// distribute the remaining probability mass equally among all other states than the ideal
+Function!(double, State) allOtherStatesErrorFunction (Set!(State) allStates, Set!(Action) allActions, State state, Action action, State ideal_state, double remainingProbMass ) {
+    
+    auto returnval = new Function!(double, State)(allStates, 0.0); 
+
+    auto amount = remainingProbMass / (allStates.size() - 1);
+
+
+    foreach (s ; allStates) {
+
+        if (s[0] != ideal_state) {
+
+            returnval[tuple(s[0])] = amount;
+        }
+
+    }
+    
+    return returnval;
 }
 
 

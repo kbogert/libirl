@@ -234,6 +234,12 @@ class Function (RETURN_TYPE, PARAM ...) {
         storage = arr;
         funct_default = def;  
     }
+
+    public this(Function!(RETURN_TYPE, PARAM) toCopy) {
+        storage = toCopy.storage.dup;
+        mySet = toCopy.mySet;
+        funct_default = toCopy.funct_default;
+    }
     
     RETURN_TYPE opIndex(Tuple!(PARAM) i ) {
         RETURN_TYPE* p;
@@ -761,6 +767,11 @@ enum DistInitType {None, Uniform, Exponential, RandomFromGaussian};
 class Distribution(PARAMS...) : Function!(double, PARAMS) {
 
     protected bool normalized;
+
+    public this(Function!(double, PARAMS) init) {
+        super(init);
+        normalized = false;
+    }
 
     
     public this(Set!PARAMS s, double def) {
