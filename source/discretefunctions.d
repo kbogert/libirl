@@ -1230,7 +1230,15 @@ class Sequence (PARAMS...) {
         foreach (timestep ; timesteps) {
 
             
-            returnval ~= "( " ~ to!string(timestep[0]) ~ " => " ~ to!string(timestep[1]) ~ " ), ";
+            returnval ~= "( ";
+            foreach (i, portion ; timestep ) {
+                returnval ~= to!string(portion);
+                if (i < timestep.length - 1) {
+                    returnval ~= " => ";
+                }
+            }
+            returnval ~= " ), ";
+            
         }
         
         return returnval;
