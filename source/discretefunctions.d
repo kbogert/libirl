@@ -1212,7 +1212,7 @@ class Sequence (PARAMS...) {
 
     
     size_t opDollar(size_t pos)() {
-        return timesteps.length;
+        return timesteps.length - 1;
     }
 
     size_t length() {
