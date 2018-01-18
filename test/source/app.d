@@ -20,7 +20,13 @@ shared static this()
 		import core.runtime;
 		Runtime.moduleUnitTester = () => true;
 //		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
-		assert(runUnitTests!(gridworld)(new ConsoleTestResultWriter), "Unit tests failed.");
-		assert(runUnitTests!(discretefunctionstest)(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        bool allSuccessful = true;
+        
+		allSuccessful &= runUnitTests!(gridworld)(new ConsoleTestResultWriter);
+		allSuccessful &= runUnitTests!(discretefunctionstest)(new ConsoleTestResultWriter);
+
+        assert(allSuccessful, "Unit tests failed.");
+        
 	}
 }
