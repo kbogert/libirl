@@ -365,3 +365,9 @@ class LinearReward : Reward {
         return returnval;
     }
 }
+
+/*
+
+    Need softmax versions of q-value iteration and value iteration
+
+*/
