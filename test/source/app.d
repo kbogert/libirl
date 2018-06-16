@@ -15,7 +15,8 @@ shared static this()
 {
 	version (unittest) {
 		// disable built-in unit test runner
-		import gridworld;
+		import gridworldmdptest;
+        import gridworldirltest;
         import discretefunctionstest;
 		import core.runtime;
 		Runtime.moduleUnitTester = () => true;
@@ -23,7 +24,8 @@ shared static this()
 
         bool allSuccessful = true;
         
-		allSuccessful &= runUnitTests!(gridworld)(new ConsoleTestResultWriter);
+		allSuccessful &= runUnitTests!(gridworldmdptest)(new ConsoleTestResultWriter);
+		allSuccessful &= runUnitTests!(gridworldirltest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(discretefunctionstest)(new ConsoleTestResultWriter);
 
         assert(allSuccessful, "Unit tests failed.");
