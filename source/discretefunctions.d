@@ -440,6 +440,23 @@ class Function (RETURN_TYPE, PARAM ...) {
 
         }
 
+        // numerically stable softmax
+        RETURN_TYPE softmax()() 
+            if (isFloatingPoint!(RETURN_TYPE))
+        {
+            RETURN_TYPE smax = RETURN_TYPE.min_normal;
+            auto max = max();
+
+            foreach (key ; mySet) {
+
+                RETURN_TYPE val = storage.get(key, funct_default);
+
+                smax += exp(val - max);
+            }            
+
+            return max - log(smax);
+        }
+        
         Tuple!(PARAM) argmax() {
             RETURN_TYPE max;
             Tuple!(PARAM) max_param;
@@ -540,6 +557,67 @@ class Function (RETURN_TYPE, PARAM ...) {
             return new Function!(RETURN_TYPE,SUBPARAM)(newSet, max);
             
         }
+
+        
+        // numerically stable softmax
+        Function!(RETURN_TYPE, PARAM[0 .. PARAM.length - 1] ) softmax()() {
+
+            return softmax!(PARAM[PARAM.length - 1])();
+
+        }
+
+        Function!(RETURN_TYPE, removeLast!(TOREMOVE) ) softmax(TOREMOVE...)() 
+            if (TOREMOVE.length > 0 && allSatisfy!(dimOfSet, TOREMOVE) && isFloatingPoint!(RETURN_TYPE))
+        {
+            alias SUBPARAM = removeLast!(TOREMOVE);
+
+            auto newSet = mySet.orth_project!(SUBPARAM)();
+        
+            RETURN_TYPE [Tuple!(SUBPARAM)] smax;
+
+
+            template MapTuple(int I, int J, int K) {
+
+                static if (I < 0) {
+                    const char[] MapTuple = "";
+                
+                } else static if (J >= 0 && is(TOREMOVE[J] == PARAM[I])) {
+                    const char[] MapTuple = MapTuple!(I-1, J-1, K);
+                } else {
+                    static if (K > 0) {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"], ";
+                    } else {
+                        const char[] MapTuple =  MapTuple!(I-1, J, K+1) ~ "combinedkey["~to!string(I)~"]";
+                    }
+                
+                }
+
+            }        
+
+            auto mmax = max!(TOREMOVE)();
+
+            foreach(combinedkey ; mySet) {
+ 
+                RETURN_TYPE val = storage.get(combinedkey, funct_default);
+
+                auto key = mixin( "tuple(" ~ MapTuple!(PARAM.length - 1, TOREMOVE.length - 1, 0) ~ ")" );
+
+                RETURN_TYPE* p;
+                p = (key in smax);
+                if (p is null) {
+                    smax[key] = exp(val - mmax[key]);
+                } else {
+                    *p += exp(val - mmax[key]);
+                }
+                
+            }
+
+            foreach ( key, ref val; smax) {
+                val = mmax[key] + log(val);
+            }            
+
+            return new Function!(RETURN_TYPE,SUBPARAM)(newSet, smax);
+        }        
 
         Function!(Tuple!(PARAM[PARAM.length - 1]), PARAM[0 .. PARAM.length - 1] ) argmax()() {
 
@@ -738,6 +816,16 @@ public auto max(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 public auto max(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 
     return f.max!(OVER)();
+}
+
+public auto softmax(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.softmax();
+}
+
+public auto softmax(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.softmax!(OVER)();
 }
 
 public auto sumout(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {

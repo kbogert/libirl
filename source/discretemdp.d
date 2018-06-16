@@ -7,6 +7,7 @@ import std.typecons;
 import std.numeric;
 import std.conv;
 import std.algorithm.comparison;
+import std.random;
 
 class State {
 
@@ -366,8 +367,65 @@ class LinearReward : Reward {
     }
 }
 
+class RandomStateReward : Reward {
+
+    protected double[State] rewards;
+    protected Set!(State) stateSet;
+    protected Set!(Action) actionSet;
+    
+    public this(Set!(State) states, Set!(Action) actions, double scale = 1.0) {
+        foreach(s ; states) {
+            rewards[s[0]] = uniform( -1.0 * scale, 1.0 * scale);
+        }
+        
+        stateSet = states;
+        actionSet = actions;
+    }
+
+    public override double opIndex(State s, Action a) {
+        return rewards[s];
+    }
+        
+    public double opIndex(Tuple!(State, Action) t) {
+        return rewards[t[0]];
+    }
+
+    public override Function!(double, State, Action) toFunction() {
+
+        auto returnval = new Function!(double, State, Action)(stateSet.cartesian_product(actionSet), 0.0);
+
+        foreach (key; returnval.param_set()) {
+            returnval[key] = opIndex(key);
+        }
+
+        return returnval;
+    }
+}
+
 /*
 
     Need softmax versions of q-value iteration and value iteration
 
 */
+
+
+public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, int max_iter = int.max) {
+
+    Function!(double, State) v_next;
+    Function!(double, State) v_prev = softmax( m.R() );
+    auto T = m.T().flatten();
+    
+    double diff = max( v_prev );
+    int iter = 0;
+
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+        
+        v_next = softmax( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
+
+        diff = max ( v_next - v_prev ); 
+        v_prev = v_next;
+    }
+
+    return v_next;
+}
+
