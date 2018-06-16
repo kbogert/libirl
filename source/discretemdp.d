@@ -429,3 +429,46 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
     return v_next;
 }
 
+
+
+public Function!(double, State, Action) soft_max_q_value_iteration(Model m, double tolerance, int max_iter = int.max) {
+
+    return sumout!(State) (m.T() * soft_max_value_iteration(m, tolerance, max_iter) );
+}
+
+public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double, State) V, Model m) {
+
+    auto Q = sumout!(State)( m.T() * V);
+
+    return soft_max_policy( Q , m );
+
+}
+
+public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double, State, Action) Q, Model m) {
+
+    auto qmax = max(Q);
+    
+    auto returnval = new ConditionalDistribution!(Action, State)(m.A(), m.S());
+
+    foreach( s ; m.S() ) {
+
+        auto d = new Distribution!(Action)(m.A());
+
+        auto smax = qmax[s];
+        double q_total = double.min_normal;
+        
+        foreach (a ; m.A()) {
+            q_total += exp( Q[tuple(s[0],a[0])] - smax );
+        }
+        
+        foreach (a ; m.A()) {
+            d [a] = exp( Q[tuple(s[0],a[0])] - smax ) / q_total;
+        }
+        
+        returnval[ s ] = d;
+    }
+
+    return returnval;
+    
+}
+
