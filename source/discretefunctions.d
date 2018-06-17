@@ -444,7 +444,7 @@ class Function (RETURN_TYPE, PARAM ...) {
         RETURN_TYPE softmax()() 
             if (isFloatingPoint!(RETURN_TYPE))
         {
-            RETURN_TYPE smax = RETURN_TYPE.min_normal;
+            RETURN_TYPE smax = 0;
             auto max = max();
 
             foreach (key ; mySet) {
@@ -454,6 +454,9 @@ class Function (RETURN_TYPE, PARAM ...) {
                 smax += exp(val - max);
             }            
 
+            if (smax == 0)
+                smax = RETURN_TYPE.min_normal;
+                
             return max - log(smax);
         }
         
@@ -613,7 +616,8 @@ class Function (RETURN_TYPE, PARAM ...) {
             }
 
             foreach ( key, ref val; smax) {
-                val = mmax[key] + log(val);
+                if (val > 0)
+                    val = mmax[key] + log(val);
             }            
 
             return new Function!(RETURN_TYPE,SUBPARAM)(newSet, smax);
@@ -1344,4 +1348,21 @@ class Sequence (PARAMS...) {
     }
     
 
+}
+
+class NumericSetSpace : discretefunctions.Set!(size_t) {
+
+
+    public this(size_t start, size_t end) {
+        Tuple!(size_t) [] tempArr;
+        for (size_t i = start; i < end; i ++) {
+            tempArr ~= tuple(i);
+        } 
+
+        super(tempArr);
+    }
+
+    public this (size_t count) {
+        this(0, count);
+    }
 }

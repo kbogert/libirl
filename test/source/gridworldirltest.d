@@ -8,6 +8,9 @@ import std.random;
 import std.math;
 import std.conv;
 import std.algorithm;
+import std.stdio;
+
+import maxentIRL;
 
 @name("MaxEntIRL exact random reward function recovery test")
 unittest {
@@ -25,18 +28,19 @@ unittest {
         tolerance = 0.001;
     }
     
-    GridWorldStateSpace states = new GridWorldStateSpace(sizeX, sizeY);
+    GridWorldStateSpaceWithTerminal states = new GridWorldStateSpaceWithTerminal(sizeX, sizeY);
     GridWorldActionSpace actions = new GridWorldActionSpace();
 
     double[] tmpArray;
     tmpArray.length = states.size();
-    tmpArray[0 .. $] = 0.0;
+    tmpArray[] = 0.0;
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
 
     auto i = 0;
     foreach (s ; states) {
         foreach (a ; actions) {
+            features[ s[0] , a[0] ] = tmpArray.dup;
             features[ s[0] , a[0] ][max(0, i - 1)] = 1.0;
             features[ s[0] , a[0] ][i] = 1.0;
             features[ s[0] , a[0] ][min(states.size() - 1, i + 1)] = 1.0;
@@ -81,7 +85,8 @@ unittest {
         auto lr = new LinearReward(features, weights);
         auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
 
-        auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) );
+        
+        auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
         auto policy = soft_max_policy(V, model);
         
         Sequence!(State, Action) [] trajectories;
@@ -91,7 +96,7 @@ unittest {
 
         // Perform MaxEntIrl
 
-        auto maxEntIRL = new MaxEntIRL_exact(model, tolerance / 2);
+        auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance / 2);
         
         double [] found_weights = maxEntIRL.solve (trajectories);
 

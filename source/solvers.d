@@ -28,3 +28,14 @@ EXECUTIVE DECISION:
 
     
 */
+
+
+double [] exponentiatedGradientDescent(double [] expert_features, double [] initial_weights, double learning_rate, double err, size_t max_iter, size_t feature_scale, double [] delegate (double [])) {
+
+    return expert_features;
+}
+
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double learning_rate, double err, size_t max_iter, double [] delegate (double [], size_t)) {
+
+    return expert_features[0];
+}
