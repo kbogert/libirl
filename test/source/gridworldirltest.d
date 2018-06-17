@@ -58,6 +58,11 @@ unittest {
     foreach (s ; states) {
         foreach (a ; actions) {
 
+            if (s[0].isTerminal()) {
+                transitions[s[0], a[0]] = new Distribution!(State)(states, 0.0);
+                continue;
+            }
+            
             auto newState = (cast(GridWorldAction)a[0]).getIdealStateFor(cast(GridWorldState)s[0]);
 
             Distribution!State ds = new Distribution!(State)(states, 0.0);

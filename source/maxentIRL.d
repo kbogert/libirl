@@ -7,6 +7,7 @@ import std.random;
 import std.typecons;
 import utility;
 import std.math;
+import std.array;
 
 /*
 
@@ -51,9 +52,8 @@ class MaxEntIRL_exact {
 
     public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true) {
 
-        double [] returnval;
-        returnval.length = reward.getSize();
-        foreach (i ; 0 .. returnval.length) 
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        foreach (i ; 0 .. returnval.length)
             returnval[i] = uniform(0.0, 1.0);
 
         max_traj_length = 0;
@@ -72,9 +72,8 @@ class MaxEntIRL_exact {
             // normalize initial weights
             returnval[] /= l1norm(returnval);
 
-            double [] avg_fe;
-            avg_fe.length = reward.getSize();
-            avg_fe[] = 0;
+            double [] avg_fe = minimallyInitializedArray!(double [])(reward.getSize());
+ 
             foreach (fe ; expert_fe) {
                 avg_fe[] += fe[] / expert_fe.length;
             }
@@ -154,12 +153,9 @@ class MaxEntIRL_exact {
         double [Action][State] P_a_s;
         
         auto D = ExpectedEdgeFrequency(weights, max_traj_length, P_a_s);
-
         auto Ds = sumout(D);
         
-        double [] returnval;
-        returnval.length = reward.getSize();
-        returnval[] = 0.0;
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
         
         foreach (s; Ds.param_set()) {
 
@@ -181,9 +177,7 @@ class MaxEntIRL_exact {
 
         auto D = ExpectedEdgeFrequency(weights, max_traj_length, P_a_s);
 
-        double [] returnval;
-        returnval.length = reward.getSize();
-        returnval[] = 0.0;
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
         foreach (s; model.S()) {
             foreach (a; model.A() ) {
@@ -214,12 +208,20 @@ double [][] feature_expectations_from_trajectories(Sequence!(State, Action)[] tr
 
 double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajectory, LinearReward reward) {
 
-    double [] returnval;
-    returnval.length = reward.getSize();
-    returnval[] = 0.0;
+    double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
     foreach(sa; trajectory) {
-        returnval[] += reward.getFeatures(sa[0], sa[1])[];
+        if (sa[0].isTerminal() && sa[1] is null) {
+            // the action on the terminal state is null, we're in trouble because the rewards
+            // are defined for state/actions.  We'll just pick any action from the set and
+            // use it, since if the features are defined correctly the action shouldn't
+            // matter for terminal states.
+
+            auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+            returnval[] += reward.getFeatures(sa[0], randomAction)[];
+        } else {
+            returnval[] += reward.getFeatures(sa[0], sa[1])[];
+        }
     }
     
     return returnval;
