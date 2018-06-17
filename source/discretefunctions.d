@@ -457,7 +457,7 @@ class Function (RETURN_TYPE, PARAM ...) {
             if (smax == 0)
                 smax = RETURN_TYPE.min_normal;
                 
-            return max - log(smax);
+            return max + log(smax);
         }
         
         Tuple!(PARAM) argmax() {
@@ -790,7 +790,10 @@ class Function (RETURN_TYPE, PARAM ...) {
         foreach (key ; mySet) {
             auto val = storage.get(key, funct_default);
 
-            returnval ~= to!string(key) ~ " => " ~ to!string(val) ~ ", ";
+            foreach (k ; key) {
+                returnval ~= to!string(k) ~ ", ";
+            }
+            returnval ~= " => " ~ to!string(val) ~ ", ";
         }
         
         return returnval;

@@ -463,10 +463,10 @@ public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double,
         if (q_total == 0) {
             q_total = double.min_normal;
         }
-        q_total = smax + log( q_total );
+        //q_total = smax + log( q_total );
         
         foreach (a ; m.A()) {
-            d [a] = exp( Q[tuple(s[0],a[0])] ) / q_total;
+            d [a] = exp( Q[tuple(s[0],a[0])] - smax ) / q_total;
         }
         
         returnval[ s ] = d;

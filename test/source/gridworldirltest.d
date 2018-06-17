@@ -9,31 +9,57 @@ import std.math;
 import std.conv;
 import std.algorithm;
 import std.stdio;
+import std.array;
+import std.typecons;
 
 import maxentIRL;
+import utility;
 
 @name("MaxEntIRL exact random reward function recovery test")
 unittest {
 
     
-    int sizeX = 10;
-    int sizeY = 10;
+    int sizeX = 5;
+    int sizeY = 5;
     double gamma = 0.95;
     double value_error = 0.001;
     int samples = 10 * sizeX * sizeY;
-    double tolerance = 0.01;
+    double tolerance = 0.0001;
 
     version(fullunittest) {
         samples = samples * 100;
-        tolerance = 0.001;
+        tolerance *= 0.01;
     }
+
+    Tuple!(int,int) [] terminals;
+
+    terminals ~= tuple(0, 0);
+    terminals ~= tuple(sizeX - 1, sizeY - 1);
     
-    GridWorldStateSpaceWithTerminal states = new GridWorldStateSpaceWithTerminal(sizeX, sizeY);
+    GridWorldStateSpaceWithTerminal states = new GridWorldStateSpaceWithTerminal(sizeX, sizeY, terminals);
     GridWorldActionSpace actions = new GridWorldActionSpace();
 
-    double[] tmpArray;
-    tmpArray.length = states.size();
-    tmpArray[] = 0.0;
+    // features are required to be only defined on terminal states
+
+    Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), new double[terminals.length]);
+    auto i = 0;
+    foreach (s ; states) {
+        double [] f = minimallyInitializedArray!(double[])(terminals.length);
+        foreach(term ; terminals) {
+            if ((cast(GridWorldState)s[0]).getX() == term[0] && (cast(GridWorldState)s[0]).getY() == term[1]) {
+                f[i] = 1;
+                i ++;
+                break;
+            }
+        }
+        foreach (a ; actions) {
+
+            features[ s[0] , a[0] ] = f;
+        }
+    }
+    
+    /*
+    double[] tmpArray = minimallyInitializedArray!(double[])(states.size);
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
 
@@ -47,6 +73,8 @@ unittest {
         }
         i ++;
     }
+*/
+
 
     int iterations = 2;
     version (fullunittest) {
@@ -60,6 +88,7 @@ unittest {
 
             if (s[0].isTerminal()) {
                 transitions[s[0], a[0]] = new Distribution!(State)(states, 0.0);
+//                transitions[tuple(s[0], a[0])][s[0]] = 1.0;
                 continue;
             }
             
@@ -82,29 +111,40 @@ unittest {
     foreach (iter ; 0 .. iterations ) {
 
         double [] weights;
-        weights.length = states.size();
+        weights.length = terminals.length;
         foreach (ref w ; weights) {
-            w = uniform(0.0, 1.0);
+            w = uniform(0.0, 100.0);
         }
+        //weights[] /= l1norm(weights);
+        writeln(weights);
         
         auto lr = new LinearReward(features, weights);
         auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+//        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
         auto policy = soft_max_policy(V, model);
-        
+//        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
+
+writeln(V);
+writeln();
+writeln(policy);
+
         Sequence!(State, Action) [] trajectories;
         foreach (j ; 0 .. samples ) {
-            trajectories ~= simulate(model, policy, sizeX + sizeY, model.initialStateDistribution() );
+            trajectories ~= simulate(model, policy, (sizeX + sizeY), model.initialStateDistribution() );
         }
+//        writeln(trajectories);
 
         // Perform MaxEntIrl
 
         auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance / 2);
         
-        double [] found_weights = maxEntIRL.solve (trajectories);
+        double [] found_weights = maxEntIRL.solve (trajectories, false);
 
+//        weights [] /= l1norm(weights);
+        
         foreach (j ; 0 .. found_weights.length) {
             assert(approxEqual(weights[j], found_weights[j], tolerance), "MaxEntIRL found bad solution: " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
         }

@@ -133,6 +133,25 @@ class GridWorldStateSpaceWithTerminal : discretefunctions.Set!(State) {
         super(tempArr);
     }
 
+    public this(int sizeX, int sizeY, Tuple!(int, int) [] terminals) {
+        Tuple!(State) [] tempArr;
+        for (int i = 0; i < sizeX; i ++) {
+            for (int j = 0; j < sizeY; j ++) {
+                bool isTerminal = false;
+                foreach (t; terminals) {
+                    if (i == t[0] && j == t[1]) {
+                        isTerminal = true;
+                        break;
+                    }
+                }
+                
+                tempArr ~= tuple(cast(State)new GridWorldState(i, j, isTerminal));
+            }
+        } 
+
+        super(tempArr);
+
+    }
 }
 
 

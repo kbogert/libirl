@@ -6,8 +6,8 @@
         "dub_additional_params": null
     },
     "debug": {
-        "external_console": false,
+        "external_console": true,
         "run_args": null,
-        "working_dir": null
+        "working_dir": "/home/kbogert/Documents/libirl/"
     }
 }

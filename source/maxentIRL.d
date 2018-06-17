@@ -61,7 +61,6 @@ class MaxEntIRL_exact {
             if (t.length() > max_traj_length)
                 max_traj_length = t.length();
 
-        
         // convert trajectories into an array of features
 
         auto expert_fe = feature_expectations_from_trajectories(trajectories, reward);
@@ -76,8 +75,10 @@ class MaxEntIRL_exact {
  
             foreach (fe ; expert_fe) {
                 avg_fe[] += fe[] / expert_fe.length;
+//import std.stdio;
+//writeln(avg_fe);
             }
-            returnval = exponentiatedGradientDescent(avg_fe, returnval.dup, 1.0, tol, max_traj_length, size_t.max, & EEFFeatures);
+            returnval = exponentiatedGradientDescent(avg_fe, returnval.dup, 5.0, tol, size_t.max, max_traj_length, & EEFFeatures);
         }            
         return returnval;
     }
@@ -89,13 +90,29 @@ class MaxEntIRL_exact {
 
         auto T = model.T().flatten();
 
+        // terminals MUST be infinite!
+        
         foreach(s; model.S()) {
             if (s[0].isTerminal()) {
                 Z_s[s[0]] = 1.0;
+
+                foreach (s_p; model.S()) {
+
+                    foreach (a; model.A()) {
+
+                        if (s_p == s) {
+                            T[tuple(s[0], a[0], s_p[0])] = 1.0;
+                        } else {
+                            T[tuple(s[0], a[0], s_p[0])] = 0.0;
+                        }
+
+                    }
+                }
+                
             }
         }
 
-//        Function!(double, State) terminals = new Function!(double, State)(Z_s);
+        Function!(double, State) terminals = new Function!(double, State)(Z_s);
 
         reward.setWeights(weights);
         Function!(double, State, Action) exp_reward = reward.toFunction();
@@ -105,13 +122,20 @@ class MaxEntIRL_exact {
             }
         }
 
+        auto state_reward = max(exp_reward);
+
+        Z_s = Z_s * state_reward;
         
+import std.stdio;
+//writeln(exp_reward);
         foreach (n ; 0 .. N) {
 
             Z_a = sumout( T * Z_s ) * exp_reward;
-            Z_s = sumout( Z_a ) /*+ terminals*/;
+            Z_s = sumout( Z_a ) + terminals * state_reward;
+//writeln(Z_a);
+//writeln();
         }
-        
+
 
         // Need to build a function (action, state) reduces Z_a, loop for each action, and save the results to P
         // awkward ...
@@ -125,7 +149,7 @@ class MaxEntIRL_exact {
             }
         }
 
-        
+//        writeln(P_a_s);
 
         NumericSetSpace num_set = new NumericSetSpace(N);
 
@@ -137,11 +161,19 @@ class MaxEntIRL_exact {
 
         foreach (t; 1 .. N) {
             foreach (k; model.S()) {
+                double temp = 0.0;
                 foreach (i; model.S()) {
-                    foreach (j; model.A()) {
-                        D_s_t[tuple(k[0], t)] += D_s_t[tuple(k[0], (t-1))] * P_a_s[i[0]][j[0]] * T[tuple(i[0], j[0], k[0])];
-                    }
+                    double val = D_s_t[tuple(i[0], (t-1))];
+//                    if (i[0].isTerminal()) {
+//                        if (i == k)
+//                            temp += val; 
+//                    } else {
+                        foreach (j; model.A()) {
+                            temp += val * P_a_s[i[0]][j[0]] * T[tuple(i[0], j[0], k[0])];
+                        }
+//                    }
                 }
+                D_s_t[tuple(k[0], t)] = temp;
             }
         }
         
@@ -154,16 +186,24 @@ class MaxEntIRL_exact {
         
         auto D = ExpectedEdgeFrequency(weights, max_traj_length, P_a_s);
         auto Ds = sumout(D);
-        
+
+//import std.stdio;
+//writeln(D);        
         double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
         
         foreach (s; Ds.param_set()) {
 
-            foreach (a; model.A() ) {
-                auto features = reward.getFeatures(s[0], a[0]);
+  /*          if (s[0].isTerminal()) {
+                    // just use the first action to get the features for the terminal state
+                    auto features = reward.getFeatures(s[0], model.A().toArray()[0][0]);
+                    returnval[] += Ds[s[0]] * features[];
+            } else {
+  */              foreach (a; model.A() ) {
+                    auto features = reward.getFeatures(s[0], a[0]);
 
-                returnval[] += Ds[s[0]] * P_a_s[s[0]][a[0]] * features[];
-            }
+                    returnval[] += Ds[s[0]] * P_a_s[s[0]][a[0]] * features[];
+                }
+//            }
         }
 
 
@@ -180,11 +220,19 @@ class MaxEntIRL_exact {
         double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
         foreach (s; model.S()) {
-            foreach (a; model.A() ) {
-                auto features = reward.getFeatures(s[0], a[0]);
 
-                returnval[] += D[tuple(s[0], timestep)] * P_a_s[s[0]][a[0]] * features[];
-            }
+/*            if (s[0].isTerminal()) {
+                    // just use the first action to get the features for the terminal state
+                    auto features = reward.getFeatures(s[0], model.A().toArray()[0][0]);
+                    returnval[] += D[tuple(s[0], timestep)] * features[];
+            } else {
+*/                foreach (a; model.A() ) {
+                    auto features = reward.getFeatures(s[0], a[0]);
+
+                    returnval[] += D[tuple(s[0], timestep)] * P_a_s[s[0]][a[0]] * features[];
+
+                }
+//            }    
         }
 
 
@@ -202,7 +250,8 @@ double [][] feature_expectations_from_trajectories(Sequence!(State, Action)[] tr
     foreach (t; trajectories) {
         returnval ~= feature_expectations_from_trajectory(t, reward);
     }
-    
+//    import std.stdio;
+//    writeln(returnval);
     return returnval;
 }
 
