@@ -23,7 +23,7 @@ unittest {
     int sizeY = 5;
     double gamma = 0.95;
     double value_error = 0.001;
-    int samples = 10 * sizeX * sizeY;
+    int samples = 1000 * sizeX * sizeY;
     double tolerance = 0.0001;
 
     version(fullunittest) {
@@ -39,7 +39,7 @@ unittest {
     GridWorldStateSpaceWithTerminal states = new GridWorldStateSpaceWithTerminal(sizeX, sizeY, terminals);
     GridWorldActionSpace actions = new GridWorldActionSpace();
 
-    // features are required to be only defined on terminal states
+    // features only defined on terminal states
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), new double[terminals.length]);
     auto i = 0;
@@ -88,7 +88,7 @@ unittest {
 
             if (s[0].isTerminal()) {
                 transitions[s[0], a[0]] = new Distribution!(State)(states, 0.0);
-//                transitions[tuple(s[0], a[0])][s[0]] = 1.0;
+                transitions[tuple(s[0], a[0])][s[0]] = 1.0;
                 continue;
             }
             
@@ -113,9 +113,9 @@ unittest {
         double [] weights;
         weights.length = terminals.length;
         foreach (ref w ; weights) {
-            w = uniform(0.0, 100.0);
+            w = uniform(0.0, 10.0);
         }
-        //weights[] /= l1norm(weights);
+        weights[] /= l1norm(weights);
         writeln(weights);
         
         auto lr = new LinearReward(features, weights);
@@ -139,7 +139,7 @@ writeln(policy);
 
         // Perform MaxEntIrl
 
-        auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance / 2);
+        auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance / 2, weights);
         
         double [] found_weights = maxEntIRL.solve (trajectories, false);
 

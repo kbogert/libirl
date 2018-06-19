@@ -3,6 +3,9 @@ module solvers;
 
 import std.math;
 import utility;
+import std.array;
+import std.algorithm.comparison;
+import std.algorithm;
 
 /*
 
@@ -89,7 +92,60 @@ writeln(diff, " ", err);
     return weights;
 }
 
-double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double learning_rate, double err, size_t max_iter, double [] delegate (double [], size_t)) {
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true) {
 
-    return expert_features[0];
+    double [] beta = new double[expert_features[0].length];
+    beta[] = - log(beta.length);
+
+    double [] z_prev = minimallyInitializedArray!(double [])(beta.length);
+    double [] w_prev = minimallyInitializedArray!(double [])(beta.length);
+
+    size_t t = 0;
+    size_t iterations = 0;
+
+    while (iterations < max_iter) {
+
+        double [] m_t = z_prev.dup;
+
+        if (! usePathLengthBounds && iterations > 0)
+            m_t[] /= iterations;
+
+        double [] weights = new double[beta.length];
+        foreach (i ; 0 .. beta.length) {
+            weights[i] = exp(beta[i] - nu*m_t[i]);
+        }
+
+        // subtract half the max to make the weight range - infinity to infinity
+        weights [] -= reduce!(max)(weights) / 2;
+
+        double [] z_t = ff(weights, t);
+        
+        import std.stdio;
+        writeln(t, ": ", z_t, " => ", expert_features[t]);
+        z_t[] -= expert_features[t][];
+
+        writeln(weights, ", ", z_t);
+        
+        if (usePathLengthBounds) {
+            z_prev = z_t;
+        } else {
+            z_prev[] += z_t[];
+        }
+
+
+        foreach(i; 0..beta.length) {
+            beta[i] = beta[i] - nu*z_t[i] - nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
+        }	
+
+
+        t ++;
+        t %= expert_features.length;
+        iterations ++;
+        if (t == 0)
+            nu /= 1.04;
+        
+        w_prev = weights;   
+    }
+        
+    return w_prev;
 }
