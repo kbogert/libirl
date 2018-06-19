@@ -43,7 +43,7 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
 writeln(expert_features, " ", feature_scale);
     // prep by normalizing all inputs
     auto ef_normed = expert_features.dup;
-//    ef_normed[] /= feature_scale;
+    ef_normed[] /= feature_scale;
 
     auto weights = initial_weights.dup;
     foreach (ref w ; weights)

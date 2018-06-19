@@ -64,7 +64,6 @@ class MaxEntIRL_exact {
 
         // convert trajectories into an array of features
 
-
         if (stochasticGradientDescent) {
 
             auto expert_fe = feature_expectations_per_timestep(trajectories, reward);
@@ -74,7 +73,7 @@ class MaxEntIRL_exact {
             // normalize initial weights
             returnval[] /= l1norm(returnval);
 
-            auto expert_fe = feature_expectations_from_trajectories(trajectories, reward);
+            auto expert_fe = feature_expectations_from_trajectories(trajectories, reward, max_traj_length);
 
             returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & EEFFeatures);
         }            
@@ -83,7 +82,7 @@ class MaxEntIRL_exact {
 
     Function!(double, State, size_t) ExpectedEdgeFrequency(double [] weights, size_t N, size_t D_length, out double [Action][State] P_a_s) {
 
-        weights = true_weights.dup;
+//        weights = true_weights.dup;
         Function!(double, State) Z_s = new Function!(double, State)(model.S(), 0.0);
         Function!(double, State, Action) Z_a = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
 
@@ -153,13 +152,14 @@ import std.stdio;
 
 //        writeln(P_a_s);
 
-        NumericSetSpace num_set = new NumericSetSpace(N);
+        NumericSetSpace num_set = new NumericSetSpace(D_length);
 
         auto D_s_t = new Function!(double, State, size_t)(model.S().cartesian_product(num_set), 0.0);
 
         foreach (s; model.S()) {
             D_s_t[tuple(s[0], cast(size_t)0)] = model.initialStateDistribution()[s[0]];
         }
+        
 
         foreach (t; 1 .. D_length) {
             foreach (k; model.S()) {
@@ -190,7 +190,9 @@ import std.stdio;
         auto Ds = sumout(D);
 
 //import std.stdio;
-//writeln(D);        
+//writeln(D);
+//writeln(Ds);        
+
         double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
                 
         foreach (s; Ds.param_set()) {
@@ -248,18 +250,18 @@ import std.stdio;
 }
 
 
-double [] feature_expectations_from_trajectories(Sequence!(State, Action)[] trajectories, LinearReward reward) {
+double [] feature_expectations_from_trajectories(Sequence!(State, Action)[] trajectories, LinearReward reward, size_t normalize_length_to = 0) {
 
     double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
     foreach (t; trajectories) {
-        returnval[] += feature_expectations_from_trajectory(t, reward)[] / trajectories.length;
+        returnval[] += feature_expectations_from_trajectory(t, reward, normalize_length_to)[] / trajectories.length;
     }
 
     return returnval;
 }
 
-double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajectory, LinearReward reward) {
+double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajectory, LinearReward reward, size_t normalize_length_to = 0) {
 
     double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
@@ -274,6 +276,20 @@ double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajecto
             returnval[] += reward.getFeatures(sa[0], randomAction)[];
         } else {
             returnval[] += reward.getFeatures(sa[0], sa[1])[];
+        }
+    }
+
+    if (trajectory.length() < normalize_length_to) {
+        if (trajectory[$][0].isTerminal()) {
+            // project the last state outwards to the desired trajectory length
+
+            if (trajectory[$][1] is null) {
+                auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+                returnval[] += (normalize_length_to - trajectory.length()) * reward.getFeatures(trajectory[$][0], randomAction)[];
+            } else {
+                returnval[] += (normalize_length_to - trajectory.length()) * reward.getFeatures(trajectory[$][0], trajectory[$][1])[];
+            }            
+
         }
     }
     
