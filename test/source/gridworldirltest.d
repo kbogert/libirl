@@ -14,6 +14,7 @@ import std.typecons;
 
 import maxentIRL;
 import utility;
+import analysis;
 
 @name("MaxEntIRL exact random reward function recovery test")
 unittest {
@@ -115,7 +116,7 @@ unittest {
         foreach (ref w ; weights) {
             w = uniform(0.0, 10.0);
         }
-        weights[] /= l1norm(weights);
+//        weights[] /= l1norm(weights);
         writeln(weights);
         
         auto lr = new LinearReward(features, weights);
@@ -127,10 +128,6 @@ unittest {
         auto policy = soft_max_policy(V, model);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
 
-writeln(V);
-writeln();
-writeln(policy);
-
         Sequence!(State, Action) [] trajectories;
         foreach (j ; 0 .. samples ) {
             trajectories ~= simulate(model, policy, (sizeX + sizeY), model.initialStateDistribution() );
@@ -139,15 +136,14 @@ writeln(policy);
 
         // Perform MaxEntIrl
 
-        auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance / 2, weights);
+        auto maxEntIRL = new MaxEntIRL_exact(model, lr, tolerance, weights);
         
-        double [] found_weights = maxEntIRL.solve (trajectories, false);
+        double [] found_weights = maxEntIRL.solve (trajectories, iter % 2 == 0); // alternate solvers
 
-//        weights [] /= l1norm(weights);
-        
-        foreach (j ; 0 .. found_weights.length) {
-            assert(approxEqual(weights[j], found_weights[j], tolerance), "MaxEntIRL found bad solution: " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
-        }
+
+        double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), value_error, sizeX * sizeY * 10);
+
+        assert(approxEqual(err, 0, tolerance), "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }

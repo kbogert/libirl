@@ -68,7 +68,7 @@ class MaxEntIRL_exact {
 
             auto expert_fe = feature_expectations_per_timestep(trajectories, reward);
             
-            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, .75, tol, 1000, & EEFFeaturesAtTimestep, true);
+            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & EEFFeaturesAtTimestep, true);
         } else {
             // normalize initial weights
             returnval[] /= l1norm(returnval);
@@ -131,7 +131,7 @@ import std.stdio;
         foreach (n ; 0 .. N) {
 
             Z_a = sumout( T * Z_s ) * exp_reward;
-            Z_s = sumout( Z_a ) /*+ terminals * state_reward*/;
+            Z_s = sumout( Z_a ) + terminals /* state_reward*/;
 //writeln(Z_a);
 //writeln();
         }

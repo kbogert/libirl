@@ -157,6 +157,20 @@ class Set(T ...) {
     }
 
 
+    public Set!( Reverse!(T) ) reverse_params () {
+
+        Tuple!(Reverse!(T)) [] newElements = new Tuple!(Reverse!(T)) [storage.length];
+
+        size_t i = 0;
+        
+        foreach ( entry; storage ) {
+            newElements[i] = entry.reverse;
+            i ++;
+        }
+                
+        return new Set!(Reverse!(T))(newElements);
+        
+    }
     
     protected template dimOfSet(DIM) {
         enum dimOfSet = (staticIndexOf!(DIM, T) != -1);
@@ -401,6 +415,22 @@ class Function (RETURN_TYPE, PARAM ...) {
     */
 
     
+    static if (isNumeric!(RETURN_TYPE)) {
+        Function!(RETURN_TYPE, PARAM) abs() 
+        {
+
+            RETURN_TYPE [Tuple!(PARAM)] result;
+
+            foreach (key ; mySet) {
+                result[key] = std.math.abs(storage.get(key, funct_default));
+            }
+
+        
+            return new Function!(RETURN_TYPE, PARAM)(mySet, result);        
+
+        }
+    }
+    
     size_t opDollar(size_t pos)() {
         return mySet.size();
     }
@@ -411,6 +441,20 @@ class Function (RETURN_TYPE, PARAM ...) {
      
     public Set!(PARAM) param_set() {
         return mySet;
+    }
+
+    public Function!(RETURN_TYPE, Reverse!(PARAM)) reverse_params() {
+
+        RETURN_TYPE [Tuple!(Reverse!(PARAM))] vals;
+
+        foreach (entry, val ; storage) {
+
+            vals[ entry.reverse ] = val;
+        }
+            
+        auto newset = mySet.reverse_params();
+        
+        return new Function!(RETURN_TYPE, Reverse!(PARAM))(newset, vals, funct_default);
     }
 
     static if (PARAM.length == 1) {
@@ -853,6 +897,11 @@ public auto argmax(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 public auto argmax(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 
     return f.argmax!(OVER)();
+}
+
+public auto abs(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.abs();
 }
 
 

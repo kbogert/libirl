@@ -476,3 +476,68 @@ public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double,
     
 }
 
+Function!(double, State) evaluate_policy(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+
+    Function!(double, State) v_next;
+    Function!(double, State) v_prev = max( m.R() );
+    auto T = m.T().flatten();
+    
+    double diff = max( v_prev );
+    int iter = 0;
+
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+        
+        v_next = (m.R() + m.gamma() * sumout!(State)( T * v_prev ) ).apply(policy) ;
+
+        diff = max ( v_next - v_prev ); 
+        v_prev = v_next;
+    }
+
+    return v_next;
+    /*
+THis doesn't work, we need the expected value of each state when using the policy
+
+will need a special value iteration here
+    
+    auto sa_frequency = stateActionVisitationFrequency(m, policy, tolerance, max_iter);
+    import std.stdio;
+    writeln(sa_frequency);
+    return sumout(sa_frequency * m.R());
+*/
+}
+
+Function!(double, State, Action) stateActionVisitationFrequency(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+    
+    auto state_freq = stateVisitationFrequency(m, policy, tolerance, max_iter);
+            
+    Function!(double, State, Action) returnval = new Function!(double, State, Action)(m.S().cartesian_product(m.A()), 0.0);
+
+    foreach (s; m.S()) {
+
+        returnval[ s[0], policy[s[0]][0] ] = state_freq[s[0]];
+    }
+    
+    return returnval;
+}
+
+Function!(double, State) stateVisitationFrequency(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+
+    Function!(double, State) mu_next;
+    Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+
+    auto T = m.T().flatten().reverse_params();
+    
+    double diff = max( mu_prev );
+    int iter = 0;
+
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+
+        mu_next = m.initialStateDistribution() + m.gamma() * sumout!(State)( T * mu_prev ).apply(policy) ;
+
+        diff = max ( mu_next - mu_prev ); 
+        mu_prev = mu_next;
+    }
+
+    return mu_next;    
+
+}
