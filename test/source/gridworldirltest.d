@@ -27,10 +27,10 @@ unittest {
     int samples = 1000 * sizeX * sizeY;
     double tolerance = 0.0001;
 
-    version(fullunittest) {
+/*    version(fullunittest) {
         samples = samples * 100;
         tolerance *= 0.01;
-    }
+    }*/
 
     Tuple!(int,int) [] terminals;
 
