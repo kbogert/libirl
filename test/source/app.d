@@ -24,7 +24,7 @@ shared static this()
 
         bool allSuccessful = true;
         
-//		allSuccessful &= runUnitTests!(gridworldmdptest)(new ConsoleTestResultWriter);
+		allSuccessful &= runUnitTests!(gridworldmdptest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(gridworldirltest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(discretefunctionstest)(new ConsoleTestResultWriter);
 

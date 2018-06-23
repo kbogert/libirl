@@ -79,7 +79,7 @@ unittest {
 
     int iterations = 2;
     version (fullunittest) {
-        iterations = 1000;
+        iterations = 50;
     }
 
     auto transitions = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
@@ -117,7 +117,7 @@ unittest {
             w = uniform(0.0, 10.0);
         }
 //        weights[] /= l1norm(weights);
-        writeln(weights);
+//        writeln(weights);
         
         auto lr = new LinearReward(features, weights);
         auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
@@ -143,7 +143,7 @@ unittest {
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), value_error, sizeX * sizeY * 10);
 
-        assert(approxEqual(err, 0, tolerance), "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(approxEqual(err, 0, tolerance), "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }

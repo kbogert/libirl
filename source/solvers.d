@@ -40,7 +40,7 @@ EXECUTIVE DECISION:
 double [] exponentiatedGradientDescent(double [] expert_features, double [] initial_weights, double learning_rate, double err, size_t max_iter, size_t feature_scale, double [] delegate (double []) ff) {
         import std.stdio;
 
-writeln(expert_features, " ", feature_scale);
+//writeln(expert_features, " ", feature_scale);
     // prep by normalizing all inputs
     auto ef_normed = expert_features.dup;
     ef_normed[] /= feature_scale;
@@ -58,11 +58,11 @@ writeln(expert_features, " ", feature_scale);
     
     do {
         
-        writeln(weights); 
+//        writeln(weights); 
         
         double [] f = ff(weights);
         f[] /= feature_scale;
-writeln(" f ", f, "\nef ", ef_normed);
+//writeln(" f ", f, "\nef ", ef_normed);
         f[] -= ef_normed[];
 
         
@@ -84,7 +84,7 @@ writeln(" f ", f, "\nef ", ef_normed);
         weights = new_w;
         learning_rate /= 1.05;       
 
-writeln(diff, " ", err);
+//writeln(diff, " ", err);
 
     } while(diff > err && iters < max_iter);
 
@@ -120,11 +120,11 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
         double [] z_t = ff(weights, t);
         
-        import std.stdio;
-        writeln(t, ": ", z_t, " => ", expert_features[t]);
+//        import std.stdio;
+//        writeln(t, ": ", z_t, " => ", expert_features[t]);
         z_t[] -= expert_features[t][];
 
-        writeln(weights, ", ", z_t);
+//        writeln(weights, ", ", z_t);
         
         if (usePathLengthBounds) {
             z_prev = z_t;
