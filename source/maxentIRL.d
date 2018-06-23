@@ -8,6 +8,7 @@ import std.typecons;
 import utility;
 import std.math;
 import std.array;
+import std.algorithm;
 
 /*
 
@@ -31,6 +32,11 @@ class MaxEntIRL_exact {
     protected LinearReward reward;
     protected size_t max_traj_length;
 
+    protected size_t sgd_block_size;
+    protected size_t sgd_callback_counter;
+    protected Function!(double, State, size_t) sgd_callback_cache;
+    protected double [Action][State] sgd_P_a_s;
+        
     protected double [] true_weights;
     public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
         model = m;
@@ -67,7 +73,11 @@ class MaxEntIRL_exact {
         if (stochasticGradientDescent) {
 
             auto expert_fe = feature_expectations_per_timestep(trajectories, reward);
-            
+
+            sgd_block_size = max(5, max_traj_length / 4);
+            sgd_callback_counter = 0;
+            sgd_callback_cache = null;
+                        
             returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & EEFFeaturesAtTimestep, true);
         } else {
             // normalize initial weights
@@ -217,10 +227,12 @@ import std.stdio;
 
     double [] EEFFeaturesAtTimestep(double [] weights, size_t timestep) {
 
-        double [Action][State] P_a_s;
+        if (sgd_callback_counter == 0 || sgd_callback_cache is null) {
 
-        auto D = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, P_a_s);
+            sgd_callback_cache = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, sgd_P_a_s);
 
+        }
+        
         double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
 
         foreach (s; model.S()) {
@@ -236,12 +248,13 @@ import std.stdio;
  //                   writeln(D);
                     auto features = reward.getFeatures(s[0], a[0]);
 
-                    returnval[] += D[tuple(s[0], timestep)] * P_a_s[s[0]][a[0]] * features[];
+                    returnval[] += sgd_callback_cache[tuple(s[0], timestep)] * sgd_P_a_s[s[0]][a[0]] * features[];
 
                 }
 //            }    
         }
 
+        sgd_callback_counter = (sgd_callback_counter + 1) % sgd_block_size;
 
         return returnval;
 
