@@ -20,7 +20,7 @@ double calcInverseLearningError(Model model, Reward true_reward, Reward learned_
     auto learned_value = value_iteration(temp_model, tolerance, max_iter);
     auto pi_L = optimum_policy(learned_value, true_model);
 
-    auto V_pi_L = evaluate_policy(true_model, pi_L, tolerance, max_iter);
+    auto V_pi_L = value_function_under_policy(true_model, pi_L, tolerance, max_iter);
 
     return calcInverseLearningError(true_model, V_pi_star, V_pi_L);
 }

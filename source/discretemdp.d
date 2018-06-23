@@ -476,7 +476,7 @@ public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double,
     
 }
 
-Function!(double, State) evaluate_policy(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+Function!(double, State) value_function_under_policy(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
 
     Function!(double, State) v_next;
     Function!(double, State) v_prev = max( m.R() );
@@ -494,16 +494,15 @@ Function!(double, State) evaluate_policy(Model m, Function!(Tuple!(Action), Stat
     }
 
     return v_next;
-    /*
-THis doesn't work, we need the expected value of each state when using the policy
 
-will need a special value iteration here
-    
-    auto sa_frequency = stateActionVisitationFrequency(m, policy, tolerance, max_iter);
-    import std.stdio;
-    writeln(sa_frequency);
-    return sumout(sa_frequency * m.R());
-*/
+}
+
+double expectedValueOfPolicy (Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+
+    auto state_visitation_freq = stateVisitationFrequency( m, policy, tolerance, max_iter);
+
+    return sumout( state_visitation_freq * m.R().apply(policy) );
+
 }
 
 Function!(double, State, Action) stateActionVisitationFrequency(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
