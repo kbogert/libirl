@@ -40,7 +40,6 @@ EXECUTIVE DECISION:
 double [] exponentiatedGradientDescent(double [] expert_features, double [] initial_weights, double learning_rate, double err, size_t max_iter, size_t feature_scale, double [] delegate (double []) ff) {
         import std.stdio;
 
-//writeln(expert_features, " ", feature_scale);
     // prep by normalizing all inputs
     auto ef_normed = expert_features.dup;
     ef_normed[] /= feature_scale;
@@ -92,7 +91,7 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
     return weights;
 }
 
-double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true) {
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
 
     double [] beta = new double[expert_features[0].length];
     beta[] = - log(beta.length);
@@ -102,8 +101,15 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
     size_t t = 0;
     size_t iterations = 0;
+    double[][] moving_average_data;
+    size_t moving_average_counter = 0;
+    double [] err_moving_averages = new double[moving_average_length];
+    foreach (ref e ; err_moving_averages) {
+       e = double.max;
+    }
+    double err_diff = double.infinity;
 
-    while (iterations < max_iter) {
+    while (iterations < max_iter && err_diff > err) {
 
         double [] m_t = z_prev.dup;
 
@@ -121,10 +127,8 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         double [] z_t = ff(weights, t);
         
 //        import std.stdio;
-//        writeln(t, ": ", z_t, " => ", expert_features[t]);
+//        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights);
         z_t[] -= expert_features[t][];
-
-//        writeln(weights, ", ", z_t);
         
         if (usePathLengthBounds) {
             z_prev = z_t;
@@ -141,9 +145,17 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         t ++;
         t %= expert_features.length;
         iterations ++;
-        if (t == 0)
+        if (t == 0) {
             nu /= 1.04;
-        
+            err_moving_averages[moving_average_counter] = abs_average(moving_average_data);
+            moving_average_counter ++;
+            moving_average_counter %= moving_average_length;
+            moving_average_data.length = 0;
+            err_diff = abs_diff_average(err_moving_averages);
+//            writeln(err_moving_averages);
+//            writeln(err_diff);
+        }
+        moving_average_data ~= z_t.dup;
         w_prev = weights;   
     }
         
