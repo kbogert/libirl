@@ -48,8 +48,8 @@ class Model {
 
 public Function!(double, State) value_iteration(Model m, double tolerance, int max_iter = int.max) {
 
-    Function!(double, State) v_next;
     Function!(double, State) v_prev = max( m.R() );
+    Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
     double diff = max( v_prev );
@@ -411,8 +411,8 @@ class RandomStateReward : Reward {
 
 public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, int max_iter = int.max) {
 
-    Function!(double, State) v_next;
     Function!(double, State) v_prev = softmax( m.R() );
+    Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
     double diff = max( v_prev );
@@ -478,8 +478,8 @@ public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double,
 
 Function!(double, State) value_function_under_policy(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
 
-    Function!(double, State) v_next;
     Function!(double, State) v_prev = max( m.R() );
+    Function!(double, State) v_next = v_prev;
     auto T = m.T().flatten();
     
     double diff = max( v_prev );
@@ -521,8 +521,8 @@ Function!(double, State, Action) stateActionVisitationFrequency(Model m, Functio
 
 Function!(double, State) stateVisitationFrequency(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
 
-    Function!(double, State) mu_next;
     Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+    Function!(double, State) mu_next = mu_prev;
 
     auto T = m.T().flatten().reverse_params();
     
@@ -540,3 +540,35 @@ Function!(double, State) stateVisitationFrequency(Model m, Function!(Tuple!(Acti
     return mu_next;    
 
 }
+
+/*
+    This feels like it should work, but it doesn't because the
+    order of the transition function is backwards for dynamic programming
+
+    Unlike value iteration the probability mass is arrived at
+    rather than extending away from like with rewards
+
+Function!(double, State) stateVisitationFrequencyTest(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
+    
+    Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+    Function!(double, State) returnval = mu_prev, mu_next = mu_prev;
+    
+
+    auto T = m.T().flatten();
+    
+    double diff = max( mu_prev );
+    int iter = 0;
+
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+
+        mu_next = m.initialStateDistribution() + m.gamma() * sumout!(State)( T * mu_prev ).apply(policy) ;
+
+        diff = max ( mu_next - mu_prev ); 
+        returnval = returnval + mu_next;
+        mu_prev = mu_next;
+    }
+
+    return returnval;
+
+}
+*/

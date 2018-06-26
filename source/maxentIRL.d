@@ -74,7 +74,8 @@ class MaxEntIRL_exact {
 
             auto expert_fe = feature_expectations_per_timestep(trajectories, reward);
 
-            sgd_block_size = max(5, max_traj_length / 4);
+//            sgd_block_size = max(3, max_traj_length / 4);
+            sgd_block_size = 1;
             sgd_callback_counter = 0;
             sgd_callback_cache = null;
                         
@@ -93,6 +94,9 @@ class MaxEntIRL_exact {
     Function!(double, State, size_t) ExpectedEdgeFrequency(double [] weights, size_t N, size_t D_length, out double [Action][State] P_a_s) {
 
 //        weights = true_weights.dup;
+
+        weights = utility.clamp(weights, -25, 25);
+        
         Function!(double, State) Z_s = new Function!(double, State)(model.S(), 0.0);
         Function!(double, State, Action) Z_a = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
 
@@ -130,9 +134,9 @@ class MaxEntIRL_exact {
             }
         }
 
-import std.stdio;        
+//import std.stdio;        
 //writeln(exp_reward);
-        auto state_reward = max(exp_reward);
+//        auto state_reward = max(exp_reward);
 
 //        Z_s = Z_s * state_reward;
         
@@ -188,7 +192,7 @@ import std.stdio;
                 D_s_t[tuple(k[0], t)] = temp;
             }
         }
-        
+//writeln(D_s_t);        
         return D_s_t;
     }
 
@@ -230,7 +234,6 @@ import std.stdio;
         if (sgd_callback_counter == 0 || sgd_callback_cache is null) {
 
             sgd_callback_cache = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, sgd_P_a_s);
-
         }
         
         double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
