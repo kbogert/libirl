@@ -2,6 +2,7 @@ module utility;
 
 import std.algorithm;
 import std.math;
+import std.array;
         
 double l1norm(double [] arr) {
 
@@ -15,4 +16,62 @@ double l2norm(double [] arr) {
 
 double sumSquares(double [] arr) {
     return reduce!((a,b) => a + b * b)(0.0, arr);
+}
+
+
+double [] clamp(double [] arr, double min_d, double max_d) {
+
+    double [] returnval = arr.dup;
+    
+    foreach (ref a; returnval) {
+        a = std.algorithm.clamp(a, min_d, max_d);
+    }
+
+    return returnval;
+}
+
+double [] array_abs(double [] data) {
+
+    double [] returnval = data.dup;
+
+    foreach (ref a; returnval) {
+        a = abs(a);
+    }
+        
+    return returnval;
+}
+
+double abs_average(double [][] data) {
+
+    if (data.length == 0)
+        return double.infinity;
+        
+    double [] sum = minimallyInitializedArray!(double[])(data[0].length);
+    foreach (entry; data) {
+        sum [] += array_abs(entry)[];
+    }
+    sum [] /= data.length;
+    
+    double returnval = 0;
+    foreach (s ; sum) {
+        returnval += s;
+    }
+    return returnval / sum.length;
+
+}
+
+double abs_diff_average(double [] data) {
+
+    if (data.length == 0)
+        return double.infinity;
+    
+    double returnval = 0;
+
+    foreach (i; 0 .. data.length) {
+        returnval += abs( data[i] - data[ (i + 1) % data.length ] );
+    }
+    returnval /= data.length;
+
+    return returnval;
+    
 }

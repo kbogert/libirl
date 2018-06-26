@@ -352,3 +352,69 @@ unittest {
         
 }
 
+/*
+@name("State Visitation Frequency test")
+unittest {
+
+    int sizeX = 10;
+    int sizeY = 10;
+    double gamma = 0.95;
+    double value_error = 0.001;
+    double idealStateTransitionProb = .90;
+
+    auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
+    auto optimal_action = new GridWorldAction(1, 0) ;    
+
+    GridWorldStateSpaceWithTerminal states = new GridWorldStateSpaceWithTerminal(sizeX, sizeY);
+    GridWorldActionSpace actions = new GridWorldActionSpace();
+
+    Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), [0]);
+
+    foreach (a ; actions) {
+        features[ optimal_state , a[0] ] = [1.0];
+    }
+
+    auto lr = new LinearReward(features, [1.0]);
+
+    auto transitions = build_simple_transition_function(states, actions, idealStateTransitionProb, & otherActionsErrorFunction);
+
+    assert( transitions[ tuple(cast(State)new GridWorldState(3, 3), cast(Action)new GridWorldAction(1, 0)) ][new GridWorldState(4,3)] == idealStateTransitionProb, "Transition function not constructed correctly");
+
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+
+    auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
+    auto pi = optimum_policy(V, model);
+
+    
+    auto mu1 = stateVisitationFrequency(model, pi, value_error);
+    auto mu2 = stateVisitationFrequencyTest(model, pi, value_error);
+
+    foreach (s; model.S()) {
+        assert (approxEqual(mu1[s[0]], mu2[s[0]], value_error), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2));
+    }    
+        
+    version(fullunittest) {
+    
+        // increase accuracy (decrease error)
+
+        gamma = 0.99;
+        value_error = 0.0001;
+
+        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
+
+        pi = optimum_policy(V, model);
+
+    
+        mu1 = stateVisitationFrequency(model, pi, value_error);
+        mu2 = stateVisitationFrequencyTest(model, pi, value_error);
+
+        foreach (s; model.S()) {
+            assert (approxEqual(mu1[s[0]], mu2[s[0]], value_error), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2));
+        }
+    }
+        
+}
+
+*/
+
