@@ -151,9 +151,10 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             moving_average_data.length = 0;
-            err_diff = abs_diff_average(err_moving_averages);
+            err_diff = stddev(err_moving_averages);
 //            writeln(err_moving_averages);
 //            writeln(err_diff);
+//            writeln(abs_diff_average(err_moving_averages));
         }
         moving_average_data ~= z_t.dup;
         w_prev = weights;   

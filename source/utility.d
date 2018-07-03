@@ -75,3 +75,12 @@ double abs_diff_average(double [] data) {
     return returnval;
     
 }
+
+// from: https://forum.dlang.org/post/kfg93v$2lju$1@digitalmars.com
+double stddev(double [] data) {
+    auto n = data.length;
+    auto avg = reduce!((a, b) => a + b / n)(0.0, data);
+    auto var = reduce!((a, b) => a + pow(b - avg, 2) / n)(0.0, data);
+
+    return sqrt(var);         
+}
