@@ -2,6 +2,7 @@ module analysis;
 
 import discretemdp;
 import discretefunctions;
+import std.typecons;
 
 double calcInverseLearningError(Model model, Function!(double, State) V_pi_star, Function!(double, State) V_pi_L) {
 
@@ -23,4 +24,18 @@ double calcInverseLearningError(Model model, Reward true_reward, Reward learned_
     auto V_pi_L = value_function_under_policy(true_model, pi_L, tolerance, max_iter);
 
     return calcInverseLearningError(true_model, V_pi_star, V_pi_L);
+}
+
+double learnedBehaviorAccuracy(Model model, Function!(Tuple!(Action), State) true_policy, Function!(Tuple!(Action), State) learned_policy) {
+
+    size_t correct_count = 0;
+
+    foreach (s; model.S()) {
+
+        if (true_policy[s[0]] == learned_policy[s[0]])
+            correct_count ++;
+    }
+
+    return correct_count / cast(double) model.S().size();
+
 }
