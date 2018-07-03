@@ -9,7 +9,8 @@ import utility;
 import std.math;
 import std.array;
 import std.algorithm;
-
+import std.numeric;
+    
 /*
 
  1. Write test cases
@@ -23,9 +24,10 @@ import std.algorithm;
  
 */
 
-// Deterministic MDPs only
-
-class MaxEntIRL_exact {
+// Implementation of Ziebart 2008 (Expected Edge Frequency Algorithm)
+// Allows for non-deterministic MDPS, assuming the stochasticity is low and unimportant
+// YMMV
+class MaxEntIRL_Ziebart_approx {
 
     protected Model model;
     protected double tol;
@@ -43,17 +45,6 @@ class MaxEntIRL_exact {
         reward = lw;
         tol = tolerance;
         this.true_weights = true_weights;
-        // verify that the MDP is deterministic
-
-        foreach (s; m.S()) {
-            foreach(a ; m.A()) {
-                foreach (s_prime ; m.S()) {
-                    auto prob = m.T()[tuple(s[0], a[0])][s_prime];
-                    if (prob < 1.0 && prob > 0.0)
-                        throw new Exception("MaxEntIRL only works with deterministic MDPs");
-                }
-            }
-        }
     }
 
 
@@ -262,6 +253,201 @@ class MaxEntIRL_exact {
         return returnval;
 
     }    
+
+}
+
+// Implementation of Ziebart 2008 (Expected Edge Frequency Algorithm)
+// Deterministic MDPs only
+class MaxEntIRL_Ziebart_exact : MaxEntIRL_Ziebart_approx {
+
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
+        super(m, lw, tolerance, true_weights);
+        // verify that the MDP is deterministic
+
+        foreach (s; m.S()) {
+            foreach(a ; m.A()) {
+                foreach (s_prime ; m.S()) {
+                    auto prob = m.T()[tuple(s[0], a[0])][s_prime];
+                    if (prob < 1.0 && prob > 0.0)
+                        throw new Exception("MaxEntIRL only works with deterministic MDPs");
+                }
+            }
+        }        
+    }
+}
+
+
+// Implementation of Ziebart 2010
+
+class MaxCausalEntIRL_Ziebart {
+
+    protected Model model;
+    protected double tol;
+    protected LinearReward reward;
+    protected size_t max_traj_length;
+
+    protected size_t sgd_block_size;
+    protected size_t sgd_callback_counter;
+    protected Distribution!(State, Action)[] sgd_callback_cache;
+        
+    protected double [] true_weights;
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
+        model = m;
+        reward = lw;
+        tol = tolerance;
+        this.true_weights = true_weights;
+    }
+
+
+    public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true) {
+
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        foreach (i ; 0 .. returnval.length)
+            returnval[i] = uniform(0.0, 1.0);
+
+        max_traj_length = 0;
+        foreach (t ; trajectories)
+            if (t.length() > max_traj_length)
+                max_traj_length = t.length();
+
+        // convert trajectories into an array of features
+
+        if (stochasticGradientDescent) {
+
+            auto expert_fe = feature_expectations_per_timestep(trajectories, reward);
+
+//            sgd_block_size = max(3, max_traj_length / 4);
+            sgd_block_size = 1;
+            sgd_callback_counter = 0;
+            sgd_callback_cache = null;
+                        
+            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & GradientForTimestep, true);
+        } else {
+            // normalize initial weights
+            returnval[] /= l1norm(returnval);
+
+            auto expert_fe = feature_expectations_from_trajectories(trajectories, reward, max_traj_length);
+
+            returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & Gradient);
+        }            
+        return returnval;
+    }
+
+    ConditionalDistribution!(Action, State) [] inferenceProcedure (double [] weights, size_t T) {
+
+        auto transitions = model.T().flatten();
+        auto log_Z_s = new Function!(double, State)(model.S(), 0.0);
+        ConditionalDistribution!(Action, State) [] P_a_s_t;
+        P_a_s_t.length = T;
+        
+        foreach_reverse (t; 0 .. T) {
+
+            auto log_Z_a_s = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
+            foreach (s ; model.S()) {
+                foreach(a ; model.A()) {
+                    log_Z_a_s[s[0], a[0]] = dotProduct(weights, reward.getFeatures(s[0], a[0]));
+                    if (t < T) {
+                        foreach (s_p; model.S()) {
+                            log_Z_a_s[s[0], a[0]] += transitions[s[0], a[0], s_p[0]] * log_Z_s[s_p[0]];
+                        }
+                    }
+                }
+            }
+
+            log_Z_s = softmax(log_Z_a_s);
+
+            double [Tuple!Action][Tuple!State] P_a_s;
+            foreach (s ; model.S()) {
+                foreach(a ; model.A()) {
+                    P_a_s[s][a] = exp(log_Z_a_s[s[0], a[0]]) / exp(log_Z_s[s[0]]); 
+                }
+            }
+                        
+            P_a_s_t[t] = new ConditionalDistribution!(Action, State)(model.A(), model.S(), P_a_s);
+        }
+
+        return P_a_s_t;
+    }
+
+    Distribution!(State, Action)[] StateActionDistributionPerTimestep(ConditionalDistribution!(Action, State)[] policy) {
+
+        auto transitions = model.T().flatten();
+
+        Distribution!(State, Action)[] D_s_a_t;
+
+import std.stdio;
+//writeln(policy[$-1]);
+//writeln();
+        foreach (t; 0 .. policy.length) {
+
+            auto D_s_a = new Distribution!(State, Action)(model.S().cartesian_product(model.A()), 0.0);
+            
+            foreach (s; model.S()) {
+                foreach (a; model.A()) {
+                    if (t == 0) {
+                        D_s_a[s[0], a[0]] = model.initialStateDistribution()[s[0]] * policy[t][s][a];
+                    } else {
+
+                        foreach(s_p; model.S()) {
+                            foreach (a_p; model.A()) {
+                                D_s_a[s[0], a[0]] += D_s_a_t[t-1][s_p[0], a_p[0]] * transitions[s_p[0], a_p[0], s[0]] * policy[t][s][a];
+                            }
+                        }
+                        
+                    }
+
+                }
+
+            }
+//writeln(D_s_a);
+//writeln();
+            D_s_a_t ~= D_s_a;
+        }
+
+        return D_s_a_t;
+    }
+    
+    double [] Gradient(double [] weights) {
+
+        
+        auto D_s_a = StateActionDistributionPerTimestep(inferenceProcedure(weights, max_traj_length));
+
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+                
+        foreach (D; D_s_a) {
+            foreach (s ; model.S()) {
+                foreach(a ; model.A()) {
+                    returnval[] += D[s[0], a[0]] * reward.getFeatures(s[0], a[0])[];
+                }
+            }
+        }
+    
+        return returnval;
+
+    }    
+
+    double [] GradientForTimestep(double [] weights, size_t timestep) {
+
+        if (sgd_callback_counter == 0 || sgd_callback_cache is null) {
+            sgd_callback_cache = StateActionDistributionPerTimestep(inferenceProcedure(weights, max_traj_length));
+        }
+//import std.stdio;
+//writeln(sgd_callback_cache[timestep]);
+        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+
+        foreach (s; model.S()) {
+            foreach (a; model.A() ) {
+                returnval[] += sgd_callback_cache[timestep][s[0], a[0]] * reward.getFeatures(s[0], a[0])[];
+
+            }
+        }
+
+        sgd_callback_counter = (sgd_callback_counter + 1) % sgd_block_size;
+
+        return returnval;
+
+    }    
+
 
 }
 
