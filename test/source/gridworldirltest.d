@@ -46,7 +46,8 @@ unittest {
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), new double[terminals.length]);
     auto i = 0;
     foreach (s ; states) {
-        double [] f = minimallyInitializedArray!(double[])(terminals.length);
+        double [] f = new double[terminals.length];
+        f[] = 0;
         foreach(term ; terminals) {
             if ((cast(GridWorldState)s[0]).getX() == term[0] && (cast(GridWorldState)s[0]).getY() == term[1]) {
                 f[i] = 1;
@@ -61,7 +62,8 @@ unittest {
     }
     
     /*
-    double[] tmpArray = minimallyInitializedArray!(double[])(states.size);
+    double[] tmpArray = new double[states.size];
+    tmpArray[] = 0;
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
 
@@ -180,7 +182,8 @@ unittest {
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), new double[terminals.length]);
     auto i = 0;
     foreach (s ; states) {
-        double [] f = minimallyInitializedArray!(double[])(terminals.length);
+        double [] f = new double[terminals.length];
+        f[] = 0;
         foreach(term ; terminals) {
             if ((cast(GridWorldState)s[0]).getX() == term[0] && (cast(GridWorldState)s[0]).getY() == term[1]) {
                 f[i] = 1;
@@ -195,7 +198,8 @@ unittest {
     }
 */    
     
-    double[] tmpArray = minimallyInitializedArray!(double[])(states.size);
+    double[] tmpArray = new double[states.size];
+    tmpArray[] = 0;
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
 

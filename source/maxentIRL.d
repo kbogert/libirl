@@ -50,7 +50,7 @@ class MaxEntIRL_Ziebart_approx {
 
     public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true) {
 
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
         foreach (i ; 0 .. returnval.length)
             returnval[i] = uniform(0.0, 1.0);
 
@@ -198,7 +198,8 @@ class MaxEntIRL_Ziebart_approx {
 //writeln(D);
 //writeln(Ds);        
 
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
+        returnval[] = 0;
                 
         foreach (s; Ds.param_set()) {
 
@@ -227,7 +228,8 @@ class MaxEntIRL_Ziebart_approx {
             sgd_callback_cache = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, sgd_P_a_s);
         }
         
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
+        returnval[] = 0;
 
         foreach (s; model.S()) {
 
@@ -301,7 +303,7 @@ class MaxCausalEntIRL_Ziebart {
 
     public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true) {
 
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
         foreach (i ; 0 .. returnval.length)
             returnval[i] = uniform(0.0, 1.0);
 
@@ -412,7 +414,8 @@ import std.stdio;
         
         auto D_s_a = StateActionDistributionPerTimestep(inferenceProcedure(weights, max_traj_length));
 
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
+        returnval[] = 0;
                 
         foreach (D; D_s_a) {
             foreach (s ; model.S()) {
@@ -433,7 +436,8 @@ import std.stdio;
         }
 //import std.stdio;
 //writeln(sgd_callback_cache[timestep]);
-        double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] returnval = new double[reward.getSize()];
+        returnval[] = 0;
 
         foreach (s; model.S()) {
             foreach (a; model.A() ) {
@@ -454,7 +458,8 @@ import std.stdio;
 
 double [] feature_expectations_from_trajectories(Sequence!(State, Action)[] trajectories, LinearReward reward, size_t normalize_length_to = 0) {
 
-    double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+    double [] returnval = new double[reward.getSize()];
+    returnval[] = 0;
 
     foreach (t; trajectories) {
         returnval[] += feature_expectations_from_trajectory(t, reward, normalize_length_to)[] / trajectories.length;
@@ -465,7 +470,8 @@ double [] feature_expectations_from_trajectories(Sequence!(State, Action)[] traj
 
 double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajectory, LinearReward reward, size_t normalize_length_to = 0) {
 
-    double [] returnval = minimallyInitializedArray!(double[])(reward.getSize());
+    double [] returnval = new double[reward.getSize()];
+    returnval[] = 0;
 
     foreach(sa; trajectory) {
         if (sa[0].isTerminal() && sa[1] is null) {
@@ -506,7 +512,8 @@ double [][] feature_expectations_per_timestep(Sequence!(State, Action)[] traject
     while(true) {
 
         size_t trajectories_found = 0;
-        double [] next_timestep = minimallyInitializedArray!(double[])(reward.getSize());
+        double [] next_timestep = new double[reward.getSize()];
+        next_timestep[] = 0;
 
         auto t = returnval.length;
         foreach(traj ; trajectories) {

@@ -46,7 +46,8 @@ double abs_average(double [][] data) {
     if (data.length == 0)
         return double.infinity;
         
-    double [] sum = minimallyInitializedArray!(double[])(data[0].length);
+    double [] sum = new double[data[0].length];
+    sum[] = 0;
     foreach (entry; data) {
         sum [] += array_abs(entry)[];
     }

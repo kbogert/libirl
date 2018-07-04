@@ -92,12 +92,17 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
 }
 
 double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
+//    import std.stdio;
 
     double [] beta = new double[expert_features[0].length * 2];
-    beta[] = - log(beta.length);
+    beta[0..(beta.length / 2)] = - log(beta.length / 2 );
+    beta[beta.length/2 .. $] = - log(beta.length );   
+    
 
-    double [] z_prev = minimallyInitializedArray!(double [])(beta.length / 2);
-    double [] w_prev = minimallyInitializedArray!(double [])(beta.length / 2);
+    double [] z_prev = new double [beta.length / 2];
+    z_prev[] = 0;
+    double [] w_prev = new double [beta.length / 2];
+    w_prev[] = 0;
 
     size_t t = 0;
     size_t iterations = 0;
@@ -131,8 +136,7 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
         double [] z_t = ff(actual_weights, t);
         
-        import std.stdio;
-        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
+//        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
         z_t[] -= expert_features[t][];
             
         if (usePathLengthBounds) {
