@@ -145,7 +145,7 @@ unittest {
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), value_error, sizeX * sizeY * 10);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.toArray()[0]], "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err < V[states.getOne()], "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }
@@ -222,7 +222,7 @@ unittest {
     foreach (iter ; 0 .. iterations ) {
 
         double [] weights;
-        weights.length = features[features.param_set.toArray()[0]].length;
+        weights.length = features[features.param_set.getOne()].length;
         foreach (ref w ; weights) {
             w = uniform(0.0, 10.0);
         }
@@ -270,7 +270,7 @@ unittest {
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), value_error, sizeX * sizeY * 10);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.toArray()[0]], "MaxCausalEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err < V[states.getOne()], "MaxCausalEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }

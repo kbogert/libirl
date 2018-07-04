@@ -36,6 +36,13 @@ class Set(T ...) {
     public Tuple!(T) [] toArray() {
         return storage.dup;
     }
+
+    public Tuple!(T) getOne() {
+        if (storage.length == 0)
+            throw new Exception("Cannot get an element from an empty set.");
+        return storage[0];
+    }
+    
     public int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
           foreach (value ; storage) {

@@ -205,7 +205,7 @@ class MaxEntIRL_Ziebart_approx {
 
   /*          if (s[0].isTerminal()) {
                     // just use the first action to get the features for the terminal state
-                    auto features = reward.getFeatures(s[0], model.A().toArray()[0][0]);
+                    auto features = reward.getFeatures(s[0], model.A().getOne()[0]);
                     returnval[] += Ds[s[0]] * features[];
             } else {
   */              foreach (a; model.A() ) {
@@ -235,7 +235,7 @@ class MaxEntIRL_Ziebart_approx {
 
 /*            if (s[0].isTerminal()) {
                     // just use the first action to get the features for the terminal state
-                    auto features = reward.getFeatures(s[0], model.A().toArray()[0][0]);
+                    auto features = reward.getFeatures(s[0], model.A().getOne()[0]);
                     returnval[] += D[tuple(s[0], timestep)] * features[];
             } else {
 */                foreach (a; model.A() ) {
@@ -480,7 +480,7 @@ double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajecto
             // use it, since if the features are defined correctly the action shouldn't
             // matter for terminal states.
 
-            auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+            auto randomAction = reward.toFunction().param_set().getOne()[1];
             returnval[] += reward.getFeatures(sa[0], randomAction)[];
         } else {
             returnval[] += reward.getFeatures(sa[0], sa[1])[];
@@ -492,7 +492,7 @@ double [] feature_expectations_from_trajectory(Sequence!(State, Action) trajecto
             // project the last state outwards to the desired trajectory length
 
             if (trajectory[$][1] is null) {
-                auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+                auto randomAction = reward.toFunction().param_set().getOne()[1];
                 returnval[] += (normalize_length_to - trajectory.length()) * reward.getFeatures(trajectory[$][0], randomAction)[];
             } else {
                 returnval[] += (normalize_length_to - trajectory.length()) * reward.getFeatures(trajectory[$][0], trajectory[$][1])[];
@@ -522,7 +522,7 @@ double [][] feature_expectations_per_timestep(Sequence!(State, Action)[] traject
 
                 auto sa = traj[t];
                 if (sa[0].isTerminal() && sa[1] is null) {
-                    auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+                    auto randomAction = reward.toFunction().param_set().getOne()[1];
                     next_timestep[] += reward.getFeatures(sa[0], randomAction)[];
                 } else
                     next_timestep[] += reward.getFeatures(sa[0], sa[1])[];
@@ -531,7 +531,7 @@ double [][] feature_expectations_per_timestep(Sequence!(State, Action)[] traject
                 auto sa = traj[$];
                 if (sa[0].isTerminal() ) {
                     if (sa[1] is null) {
-                        auto randomAction = reward.toFunction().param_set().toArray()[0][1];
+                        auto randomAction = reward.toFunction().param_set().getOne()[1];
                         next_timestep[] += reward.getFeatures(sa[0], randomAction)[];
                     } else
                         next_timestep[] += reward.getFeatures(sa[0], sa[1])[];
