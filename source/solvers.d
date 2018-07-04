@@ -93,11 +93,11 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
 
 double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
 
-    double [] beta = new double[expert_features[0].length];
+    double [] beta = new double[expert_features[0].length * 2];
     beta[] = - log(beta.length);
 
-    double [] z_prev = minimallyInitializedArray!(double [])(beta.length);
-    double [] w_prev = minimallyInitializedArray!(double [])(beta.length);
+    double [] z_prev = minimallyInitializedArray!(double [])(beta.length / 2);
+    double [] w_prev = minimallyInitializedArray!(double [])(beta.length / 2);
 
     size_t t = 0;
     size_t iterations = 0;
@@ -117,19 +117,24 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
             m_t[] /= iterations;
 
         double [] weights = new double[beta.length];
-        foreach (i ; 0 .. beta.length) {
+        foreach (i ; 0 .. (beta.length / 2)) {
             weights[i] = exp(beta[i] - nu*m_t[i]);
+            weights[i + (beta.length / 2)] = exp(beta[i + (beta.length / 2)] + nu*m_t[i]);
         }
 
-        // subtract half the max to make the weight range - infinity to infinity
-        weights [] -= reduce!(max)(weights) / 2;
+        // allow for negative weights by interpreting the second half
+        // of the weight vector as negative values
+        double [] actual_weights = new double[beta.length / 2];
+        foreach(i; 0 .. actual_weights.length) {
+            actual_weights[i] = weights[i] - weights[i + actual_weights.length];
+        }
 
-        double [] z_t = ff(weights, t);
+        double [] z_t = ff(actual_weights, t);
         
-//        import std.stdio;
-//        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights);
+        import std.stdio;
+        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
         z_t[] -= expert_features[t][];
-        
+            
         if (usePathLengthBounds) {
             z_prev = z_t;
         } else {
@@ -137,8 +142,9 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         }
 
 
-        foreach(i; 0..beta.length) {
+        foreach(i; 0..(beta.length / 2)) {
             beta[i] = beta[i] - nu*z_t[i] - nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
+            beta[i + (beta.length / 2)] = beta[i + (beta.length / 2)] + nu*z_t[i] + nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
         }	
 
 
@@ -157,7 +163,7 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 //            writeln(abs_diff_average(err_moving_averages));
         }
         moving_average_data ~= z_t.dup;
-        w_prev = weights;   
+        w_prev = actual_weights;   
     }
         
     return w_prev;
