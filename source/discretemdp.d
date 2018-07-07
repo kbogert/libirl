@@ -52,17 +52,16 @@ public Function!(double, State) value_iteration(Model m, double tolerance, int m
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
-    double diff = max( v_prev );
+    double diff = abs(max( v_prev ));
     int iter = 0;
 
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
-        
+       
         v_next = max( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
         diff = max ( v_next - v_prev ); 
         v_prev = v_next;
     }
-
     return v_next;
 }
 
@@ -402,6 +401,49 @@ class RandomStateReward : Reward {
     }
 }
 
+// linear reward with one feature per state
+class UniqueFeaturesPerStateReward : LinearReward {
+
+    public this(Set!(State) states, Set!(Action) actions, double [] w) {
+
+        double[] tmpArray = new double[states.size()];
+        tmpArray[] = 0;
+        
+        Function!(double [], State, Action) f = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
+
+        auto i = 0;
+        foreach (s ; states) {
+            foreach (a ; actions) {
+                f[ s[0] , a[0] ] = tmpArray.dup;
+                f[ s[0] , a[0] ][i] = 1.0;
+            }
+            i ++;
+        }        
+        super(f, w);
+    }
+}
+
+// linear reward with one feature per state-action pair
+class UniqueFeaturesPerStateActionReward : LinearReward {
+
+    public this(Set!(State) states, Set!(Action) actions, double [] w) {
+
+        double[] tmpArray = new double[states.size() * actions.size()];
+        tmpArray[] = 0;
+        
+        Function!(double [], State, Action) f = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
+
+        auto i = 0;
+        foreach (s ; states) {
+            foreach (a ; actions) {
+                f[ s[0] , a[0] ] = tmpArray.dup;
+                f[ s[0] , a[0] ][i] = 1.0;
+                i ++;
+            }
+        }        
+        super(f, w);
+    }
+}
 /*
 
     Need softmax versions of q-value iteration and value iteration
@@ -415,14 +457,14 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
-    double diff = max( v_prev );
+    double diff = abs(max( v_prev ));
     int iter = 0;
 
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
         
         v_next = softmax( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
-        diff = max ( v_next - v_prev ); 
+        diff = abs(max ( v_next - v_prev )); 
         v_prev = v_next;
     }
 
@@ -478,18 +520,18 @@ public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double,
 
 Function!(double, State) value_function_under_policy(Model m, Function!(Tuple!(Action), State) policy, double tolerance, int max_iter = int.max) {
 
-    Function!(double, State) v_prev = max( m.R() );
+    Function!(double, State) v_prev =  m.R().apply(policy);
     Function!(double, State) v_next = v_prev;
     auto T = m.T().flatten();
     
-    double diff = max( v_prev );
+    double diff = abs(max( v_prev ));
     int iter = 0;
-
+    
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
-        
         v_next = (m.R() + m.gamma() * sumout!(State)( T * v_prev ) ).apply(policy) ;
 
-        diff = max ( v_next - v_prev ); 
+        diff = abs(max ( v_next - v_prev )); 
+
         v_prev = v_next;
     }
 
