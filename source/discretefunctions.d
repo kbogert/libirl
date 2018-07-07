@@ -844,7 +844,14 @@ class Function (RETURN_TYPE, PARAM ...) {
             foreach (k ; key) {
                 returnval ~= to!string(k) ~ ", ";
             }
-            returnval ~= " => " ~ to!string(val) ~ ", ";
+            static if (isTuple!(typeof(val))) {
+                returnval ~= " => ";
+                foreach (v ; val)
+                    returnval ~= to!string(v) ~ ", ";
+
+            } else {
+                returnval ~= " => " ~ to!string(val) ~ ", ";
+            }
         }
         
         return returnval;
