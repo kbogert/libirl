@@ -477,6 +477,144 @@ import std.stdio;
 }
 
 
+class MaxCausalEntIRL_InfMDP : MaxCausalEntIRL_Ziebart {
+
+    protected double value_error;
+    
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
+        super(m, lw, tolerance, true_weights);
+        this.value_error = value_error;
+    }
+    
+    override ConditionalDistribution!(Action, State) [] inferenceProcedure (double [] weights, size_t T) {
+
+        reward.setWeights(weights);
+        auto m = new BasicModel(model.S(), model.A(), model.T(), reward.toFunction(), model.gamma(), model.initialStateDistribution());
+
+        Function!(double, State) V_soft;
+        if ( inference_cache.hasValue() ) { 
+            V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())), inference_cache.get!(Function!(double, State)));
+        } else {
+            V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())));
+        }
+        auto policy = soft_max_policy(V_soft, m);
+
+        ConditionalDistribution!(Action, State) [] returnval = new ConditionalDistribution!(Action, State) [T];
+
+        foreach (i; 0 .. T) {
+            returnval[i] = policy;
+        }
+
+        inference_cache = V_soft;
+        return returnval;
+    }
+}
+
+class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
+
+    protected Distribution!(State, Action) [] empirical_D_s_a_t;
+    
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
+        super(m, lw, tolerance, true_weights, value_error);
+    }
+
+    override public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true) {
+
+        max_traj_length = 0;
+        foreach (t ; trajectories)
+            if (t.length() > max_traj_length)
+                max_traj_length = t.length();
+                
+        auto sa_set = model.S().cartesian_product(model.A());
+        
+        empirical_D_s_a_t = new Distribution!(State, Action) [max_traj_length];
+        foreach(t; 0 .. max_traj_length) {
+            empirical_D_s_a_t[t] = new Distribution!(State, Action) (sa_set, 0.0);
+            
+            foreach(traj; trajectories) {
+                if (traj.length > t) {
+                    empirical_D_s_a_t[t][traj[t]] += 1.0;
+                }
+            }
+            empirical_D_s_a_t[t].normalize();
+
+        }
+        return super.solve(trajectories, stochasticGradientDescent);
+
+    }
+
+    
+    Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {
+        auto D_s_a = new Distribution!(State, Action)(model.S().cartesian_product(model.A()), 0.0);
+
+        auto transitions = model.T().flatten();
+  
+        foreach (s; model.S()) {
+            foreach (a; model.A()) {
+                if (timestep == 0) {
+                    D_s_a[s[0], a[0]] = model.initialStateDistribution()[s[0]] * policy[timestep][s][a];
+                } else {
+
+                    foreach(s_p; model.S()) {
+                        double pr_s_t = 0.0;
+                        foreach (a_p_p; model.A()) {
+                            pr_s_t += empirical_D_s_a_t[timestep-1][s_p[0], a_p_p[0]];              
+                        }
+                        foreach (a_p; model.A()) {                            
+                            D_s_a[s[0], a[0]] += pr_s_t * policy[timestep-1][s_p][a_p] * transitions[s_p[0], a_p[0], s[0]] * policy[timestep][s][a];
+                        }
+                    }   
+                }
+            }
+        }
+
+        return D_s_a;        
+    }
+
+    override double [] GradientForTimestep(double [] weights, size_t timestep) {
+
+        auto P_a_s = StateActionDistributionAtTimestep(inferenceProcedure(weights, max_traj_length), timestep);
+
+        double [] returnval = new double[reward.getSize()];
+        returnval[] = 0;
+
+        foreach (s; model.S()) {
+            foreach (a; model.A() ) {
+                returnval[] += P_a_s[s[0], a[0]] * reward.getFeatures(s[0], a[0])[];
+
+            }
+        }
+
+        return returnval;        
+    }
+}
+
+class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
+
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
+        super(m, lw, tolerance, true_weights, value_error);
+    }
+    
+    override Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {
+        auto D_s_a = new Distribution!(State, Action)(model.S().cartesian_product(model.A()), 0.0);
+
+        auto transitions = model.T().flatten();
+  
+        foreach (s; model.S()) {
+            foreach (a; model.A()) {
+                foreach (a_p; model.A()) {
+                    D_s_a[s[0], a[0]] += empirical_D_s_a_t[timestep][s[0], a_p[0]];              
+                }
+                D_s_a[s[0], a[0]] *= policy[timestep][s][a];
+            }
+        }
+
+        return D_s_a;
+    }
+    
+}
+
+
 double [] feature_expectations_from_trajectories(Sequence!(State, Action)[] trajectories, LinearReward reward, size_t normalize_length_to = 0) {
 
     double [] returnval = new double[reward.getSize()];
