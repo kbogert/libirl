@@ -47,8 +47,14 @@ class Model {
 
 
 public Function!(double, State) value_iteration(Model m, double tolerance, int max_iter = int.max) {
-
     Function!(double, State) v_prev = max( m.R() );
+
+    return value_iteration(m, tolerance, v_prev, max_iter);
+}
+
+public Function!(double, State) value_iteration(Model m, double tolerance, Function!(double, State) V_prior, int max_iter = int.max) {
+
+    Function!(double, State) v_prev = V_prior;
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
@@ -452,8 +458,14 @@ class UniqueFeaturesPerStateActionReward : LinearReward {
 
 
 public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, int max_iter = int.max) {
-
     Function!(double, State) v_prev = softmax( m.R() );
+
+    return soft_max_value_iteration(m, tolerance, v_prev, max_iter);
+}
+
+public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, Function!(double, State) prior_v, int max_iter = int.max) {
+
+    Function!(double, State) v_prev = prior_v;
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
     
