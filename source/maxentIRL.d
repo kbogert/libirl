@@ -10,7 +10,8 @@ import std.math;
 import std.array;
 import std.algorithm;
 import std.numeric;
-    
+import std.variant;
+
 /*
 
  1. Write test cases
@@ -35,9 +36,8 @@ class MaxEntIRL_Ziebart_approx {
     protected size_t max_traj_length;
 
     protected size_t sgd_block_size;
-    protected size_t sgd_callback_counter;
-    protected Function!(double, State, size_t) sgd_callback_cache;
-    protected double [Action][State] sgd_P_a_s;
+    protected size_t inference_counter;
+    protected Variant inference_cache;
         
     protected double [] true_weights;
     public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
@@ -45,6 +45,8 @@ class MaxEntIRL_Ziebart_approx {
         reward = lw;
         tol = tolerance;
         this.true_weights = true_weights;
+        sgd_block_size = 0;
+        inference_counter = 0;
     }
 
 
@@ -67,8 +69,7 @@ class MaxEntIRL_Ziebart_approx {
 
 //            sgd_block_size = max(3, max_traj_length / 4);
             sgd_block_size = 1;
-            sgd_callback_counter = 0;
-            sgd_callback_cache = null;
+            inference_counter = 0;
                         
             returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & EEFFeaturesAtTimestep, true);
         } else {
@@ -86,14 +87,10 @@ class MaxEntIRL_Ziebart_approx {
 
 //        weights = true_weights.dup;
 
-        weights = utility.clamp(weights, -25, 25);
-        
+            // terminals MUST be infinite!
+
         Function!(double, State) Z_s = new Function!(double, State)(model.S(), 0.0);
-        Function!(double, State, Action) Z_a = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
-
         auto T = model.T().flatten();
-
-        // terminals MUST be infinite!
         
         foreach(s; model.S()) {
             if (s[0].isTerminal()) {
@@ -115,45 +112,61 @@ class MaxEntIRL_Ziebart_approx {
             }
         }
 
-        Function!(double, State) terminals = new Function!(double, State)(Z_s);
+        if ( inference_counter != 0 && inference_cache.hasValue()) {
+            // use the cached P_a_s instead of calculating it
 
-        reward.setWeights(weights);
-        Function!(double, State, Action) exp_reward = reward.toFunction();
-        foreach (s; model.S()) {
-            foreach(a; model.A()) {
-                exp_reward[s[0],a[0]] = exp(exp_reward[s[0],a[0]]);
+            P_a_s = inference_cache.get!(double[Action][State])();
+            
+        } else {
+
+            weights = utility.clamp(weights, -25, 25);
+        
+            Function!(double, State, Action) Z_a = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
+
+            Function!(double, State) terminals = new Function!(double, State)(Z_s);
+
+            reward.setWeights(weights);
+            Function!(double, State, Action) exp_reward = reward.toFunction();
+            foreach (s; model.S()) {
+                foreach(a; model.A()) {
+                    exp_reward[s[0],a[0]] = exp(exp_reward[s[0],a[0]]);
+                }
             }
-        }
 
-//import std.stdio;        
-//writeln(exp_reward);
-//        auto state_reward = max(exp_reward);
+    //import std.stdio;        
+    //writeln(exp_reward);
+    //        auto state_reward = max(exp_reward);
 
-//        Z_s = Z_s * state_reward;
+    //        Z_s = Z_s * state_reward;
         
 
-//writeln(exp_reward);
-        foreach (n ; 0 .. N) {
+    //writeln(exp_reward);
+            foreach (n ; 0 .. N) {
 
-            Z_a = sumout( T * Z_s ) * exp_reward;
-            Z_s = sumout( Z_a ) + terminals /* state_reward*/;
-//writeln(Z_a);
-//writeln();
-        }
-
-
-        // Need to build a function (action, state) reduces Z_a, loop for each action, and save the results to P
-        // awkward ...
-
-        foreach (a; model.A()) {
-//            auto choose_a = new Function!(Tuple!(Action), State)(model.S(), a);
-//            auto temp = Z_a.apply(choose_a) / Z_s;
-
-            foreach (s; model.S()) {
-//                P_a_s[s[0]][a[0]] = temp[s[0]];
-                P_a_s[s[0]][a[0]] = Z_a[tuple(s[0], a[0])] / Z_s[s[0]];
+                Z_a = sumout( T * Z_s ) * exp_reward;
+                Z_s = sumout( Z_a ) + terminals /* state_reward*/;
+    //writeln(Z_a);
+    //writeln();
             }
+
+
+            // Need to build a function (action, state) reduces Z_a, loop for each action, and save the results to P
+            // awkward ...
+
+            foreach (a; model.A()) {
+    //            auto choose_a = new Function!(Tuple!(Action), State)(model.S(), a);
+    //            auto temp = Z_a.apply(choose_a) / Z_s;
+
+                foreach (s; model.S()) {
+    //                P_a_s[s[0]][a[0]] = temp[s[0]];
+                    P_a_s[s[0]][a[0]] = Z_a[tuple(s[0], a[0])] / Z_s[s[0]];
+                }
+            }
+
+            inference_cache = P_a_s;
         }
+        
+        inference_counter = (inference_counter + 1) % sgd_block_size;
 
 //        writeln(P_a_s);
 
@@ -223,10 +236,9 @@ class MaxEntIRL_Ziebart_approx {
 
     double [] EEFFeaturesAtTimestep(double [] weights, size_t timestep) {
 
-        if (sgd_callback_counter == 0 || sgd_callback_cache is null) {
+        double [Action][State] P_a_s;
 
-            sgd_callback_cache = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, sgd_P_a_s);
-        }
+        auto D = ExpectedEdgeFrequency(weights, model.S().size(), max_traj_length, P_a_s);
         
         double [] returnval = new double[reward.getSize()];
         returnval[] = 0;
@@ -244,13 +256,11 @@ class MaxEntIRL_Ziebart_approx {
  //                   writeln(D);
                     auto features = reward.getFeatures(s[0], a[0]);
 
-                    returnval[] += sgd_callback_cache[tuple(s[0], timestep)] * sgd_P_a_s[s[0]][a[0]] * features[];
+                    returnval[] += D[tuple(s[0], timestep)] * P_a_s[s[0]][a[0]] * features[];
 
                 }
 //            }    
         }
-
-        sgd_callback_counter = (sgd_callback_counter + 1) % sgd_block_size;
 
         return returnval;
 
@@ -289,8 +299,8 @@ class MaxCausalEntIRL_Ziebart {
     protected size_t max_traj_length;
 
     protected size_t sgd_block_size;
-    protected size_t sgd_callback_counter;
-    protected Distribution!(State, Action)[] sgd_callback_cache;
+    protected size_t inference_counter;
+    protected Variant inference_cache;
         
     protected double [] true_weights;
     public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
@@ -298,6 +308,8 @@ class MaxCausalEntIRL_Ziebart {
         reward = lw;
         tol = tolerance;
         this.true_weights = true_weights;
+        sgd_block_size = 0;
+        inference_counter = 0;
     }
 
 
@@ -320,8 +332,7 @@ class MaxCausalEntIRL_Ziebart {
 
 //            sgd_block_size = max(3, max_traj_length / 4);
             sgd_block_size = 1;
-            sgd_callback_counter = 0;
-            sgd_callback_cache = null;
+            inference_counter = 0;
                         
             returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & GradientForTimestep, true);
         } else {
@@ -337,38 +348,51 @@ class MaxCausalEntIRL_Ziebart {
 
     ConditionalDistribution!(Action, State) [] inferenceProcedure (double [] weights, size_t T) {
 
-        auto transitions = model.T().flatten();
-        auto log_Z_s = new Function!(double, State)(model.S(), 0.0);
-        ConditionalDistribution!(Action, State) [] P_a_s_t;
-        P_a_s_t.length = T;
+        scope (exit)  inference_counter = (inference_counter + 1) % sgd_block_size;
         
-        foreach_reverse (t; 0 .. T) {
+        if ( inference_counter != 0 && inference_cache.hasValue()) {
+            // use the cached P(A|S) instead of calculating it
 
-            auto log_Z_a_s = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
-            foreach (s ; model.S()) {
-                foreach(a ; model.A()) {
-                    log_Z_a_s[s[0], a[0]] = dotProduct(weights, reward.getFeatures(s[0], a[0]));
-                    if (t < T) {
-                        foreach (s_p; model.S()) {
-                            log_Z_a_s[s[0], a[0]] += transitions[s[0], a[0], s_p[0]] * log_Z_s[s_p[0]];
+            return inference_cache.get!(ConditionalDistribution!(Action, State)[])();
+            
+        } else {
+                    
+            auto transitions = model.T().flatten();
+            auto log_Z_s = new Function!(double, State)(model.S(), 0.0);
+            ConditionalDistribution!(Action, State) [] P_a_s_t;
+            P_a_s_t.length = T;
+        
+            foreach_reverse (t; 0 .. T) {
+
+                auto log_Z_a_s = new Function!(double, State, Action)(model.S().cartesian_product(model.A()), 0.0);
+                foreach (s ; model.S()) {
+                    foreach(a ; model.A()) {
+                        log_Z_a_s[s[0], a[0]] = dotProduct(weights, reward.getFeatures(s[0], a[0]));
+                        if (t < T) {
+                            foreach (s_p; model.S()) {
+                                log_Z_a_s[s[0], a[0]] += transitions[s[0], a[0], s_p[0]] * log_Z_s[s_p[0]];
+                            }
                         }
                     }
                 }
-            }
 
-            log_Z_s = softmax(log_Z_a_s);
+                log_Z_s = softmax(log_Z_a_s);
 
-            double [Tuple!Action][Tuple!State] P_a_s;
-            foreach (s ; model.S()) {
-                foreach(a ; model.A()) {
-                    P_a_s[s][a] = exp(log_Z_a_s[s[0], a[0]]) / exp(log_Z_s[s[0]]); 
+                double [Tuple!Action][Tuple!State] P_a_s;
+                foreach (s ; model.S()) {
+                    foreach(a ; model.A()) {
+                        P_a_s[s][a] = exp(log_Z_a_s[s[0], a[0]]) / exp(log_Z_s[s[0]]); 
+                    }
                 }
-            }
                         
-            P_a_s_t[t] = new ConditionalDistribution!(Action, State)(model.A(), model.S(), P_a_s);
-        }
+                P_a_s_t[t] = new ConditionalDistribution!(Action, State)(model.A(), model.S(), P_a_s);
+            }
 
-        return P_a_s_t;
+
+            inference_cache = P_a_s_t;
+            
+            return P_a_s_t;
+        }
     }
 
     Distribution!(State, Action)[] StateActionDistributionPerTimestep(ConditionalDistribution!(Action, State)[] policy) {
@@ -431,9 +455,8 @@ import std.stdio;
 
     double [] GradientForTimestep(double [] weights, size_t timestep) {
 
-        if (sgd_callback_counter == 0 || sgd_callback_cache is null) {
-            sgd_callback_cache = StateActionDistributionPerTimestep(inferenceProcedure(weights, max_traj_length));
-        }
+        auto D_s_a = StateActionDistributionPerTimestep(inferenceProcedure(weights, max_traj_length));
+
 //import std.stdio;
 //writeln(sgd_callback_cache[timestep]);
         double [] returnval = new double[reward.getSize()];
@@ -441,12 +464,10 @@ import std.stdio;
 
         foreach (s; model.S()) {
             foreach (a; model.A() ) {
-                returnval[] += sgd_callback_cache[timestep][s[0], a[0]] * reward.getFeatures(s[0], a[0])[];
+                returnval[] += D_s_a[timestep][s[0], a[0]] * reward.getFeatures(s[0], a[0])[];
 
             }
         }
-
-        sgd_callback_counter = (sgd_callback_counter + 1) % sgd_block_size;
 
         return returnval;
 
