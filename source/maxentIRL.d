@@ -45,7 +45,7 @@ class MaxEntIRL_Ziebart_approx {
         reward = lw;
         tol = tolerance;
         this.true_weights = true_weights;
-        sgd_block_size = 0;
+        sgd_block_size = 1;
         inference_counter = 0;
     }
 
@@ -308,7 +308,7 @@ class MaxCausalEntIRL_Ziebart {
         reward = lw;
         tol = tolerance;
         this.true_weights = true_weights;
-        sgd_block_size = 0;
+        sgd_block_size = 1;
         inference_counter = 0;
     }
 
@@ -491,12 +491,7 @@ class MaxCausalEntIRL_InfMDP : MaxCausalEntIRL_Ziebart {
         reward.setWeights(weights);
         auto m = new BasicModel(model.S(), model.A(), model.T(), reward.toFunction(), model.gamma(), model.initialStateDistribution());
 
-        Function!(double, State) V_soft;
-        if ( inference_cache.hasValue() ) { 
-            V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())), inference_cache.get!(Function!(double, State)));
-        } else {
-            V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())));
-        }
+        auto V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())), inference_cache);
         auto policy = soft_max_policy(V_soft, m);
 
         ConditionalDistribution!(Action, State) [] returnval = new ConditionalDistribution!(Action, State) [T];
