@@ -8,6 +8,7 @@ import std.numeric;
 import std.conv;
 import std.algorithm.comparison;
 import std.random;
+import std.variant;
 
 class State {
 
@@ -45,6 +46,17 @@ class Model {
     abstract Distribution!(State) initialStateDistribution();
 }
 
+// function which allows for iterative value iteration using a Variant object as a prior
+// the Variant must hold a Function!(double, State) or be uninitialized
+public Function!(double, State) value_iteration(Model m, double tolerance, Variant prior_v, int max_iter = int.max) {
+
+    if (prior_v.hasValue()) {
+        auto v_prev = prior_v.get!(Function!(double, State));
+        return value_iteration(m, tolerance, v_prev, max_iter);
+    } else {
+        return value_iteration(m, tolerance, max_iter);
+    }
+}
 
 public Function!(double, State) value_iteration(Model m, double tolerance, int max_iter = int.max) {
     Function!(double, State) v_prev = max( m.R() );
@@ -456,6 +468,18 @@ class UniqueFeaturesPerStateActionReward : LinearReward {
 
 */
 
+
+// function which allows for iterative value iteration using a Variant object as a prior
+// the Variant must hold a Function!(double, State) or be uninitialized
+public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, Variant prior_v, int max_iter = int.max) {
+
+    if (prior_v.hasValue()) {
+        auto v_prev = prior_v.get!(Function!(double, State));
+        return soft_max_value_iteration(m, tolerance, v_prev, max_iter);
+    } else {
+        return soft_max_value_iteration(m, tolerance, max_iter);
+    }
+}
 
 public Function!(double, State) soft_max_value_iteration(Model m, double tolerance, int max_iter = int.max) {
     Function!(double, State) v_prev = softmax( m.R() );
