@@ -82,7 +82,7 @@ unittest {
 
     int iterations = 2;
     version (fullunittest) {
-        iterations = 50;
+        iterations = 20;
     }
 
     auto transitions = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
@@ -216,7 +216,7 @@ unittest {
 
     int iterations = 2;
     version (fullunittest) {
-        iterations = 50;
+        iterations = 20;
     }
     
     foreach (iter ; 0 .. iterations ) {
@@ -341,7 +341,7 @@ unittest {
 
     int iterations = 2;
     version (fullunittest) {
-        iterations = 50;
+        iterations = 20;
     }
     
     foreach (iter ; 0 .. iterations ) {
