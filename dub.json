@@ -10,7 +10,6 @@
 "authors" : ["Kenneth Bogert"],
 "sourcePaths" : ["source/"],
 "importPaths" :["source/"],
-"dependency" : {"tested" : "~>0.9.4"},
 "targetType" :"library",
 "subPackages" : [ "./test" ]
 }
