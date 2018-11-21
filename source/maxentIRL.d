@@ -25,10 +25,17 @@ import std.variant;
  
 */
 
+// An interface for Max Ent problems that take trajectories as input (sequences of state/action pairs)
+interface Trajectory_IRL_Problem {
+
+    public double [] solve (Sequence!(State, Action)[] trajectories, bool stochasticGradientDescent = true);
+
+}
+
 // Implementation of Ziebart 2008 (Expected Edge Frequency Algorithm)
 // Allows for non-deterministic MDPS, assuming the stochasticity is low and unimportant
 // YMMV
-class MaxEntIRL_Ziebart_approx {
+class MaxEntIRL_Ziebart_approx : Trajectory_IRL_Problem {
 
     protected Model model;
     protected double tol;
@@ -291,7 +298,7 @@ class MaxEntIRL_Ziebart_exact : MaxEntIRL_Ziebart_approx {
 
 // Implementation of Ziebart 2010
 
-class MaxCausalEntIRL_Ziebart {
+class MaxCausalEntIRL_Ziebart : Trajectory_IRL_Problem  {
 
     protected Model model;
     protected double tol;
@@ -707,7 +714,6 @@ double [][] feature_expectations_per_timestep(Sequence!(State, Action)[] traject
 }
 
 // TODO: Implement expectation finders; Exact, Gibbs, Matropolis-Hastings, Hybrid MCMC
-// TODO: Create IRL problem interface and make the above implement it (only care about solve() )
 // TODO: Implement LME IRL as containing one IRL problem and an expectation solver
 // TODO: Implement a generic MaxEnt over sequences solver? Or else one for Shervin's style
 // TODO: Implement Robost IRL as containing one generic MaxEnt problem and an expectation solver
