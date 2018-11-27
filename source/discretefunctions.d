@@ -1325,14 +1325,14 @@ class Sequence (PARAMS...) {
 
 
     public void opOpAssign(string op)(Tuple!(PARAMS) addition) 
-        if (op == "~=")
+        if (op == "~")
     {
 
         timesteps ~= addition;
     }
 
-    public void opOpAssign(string op)(Sequence!Params addition) 
-        if (op == "~=")
+    public void opOpAssign(string op)(Sequence!PARAMS addition) 
+        if (op == "~")
     {
 
         timesteps ~= addition.timesteps;
