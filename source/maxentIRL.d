@@ -12,6 +12,7 @@ import std.algorithm;
 import std.numeric;
 import std.variant;
 import featureexpectations;
+import trajectories;
 
 /*
 
@@ -621,6 +622,50 @@ class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
 
 // TODO: Implement expectation finders; Exact, Gibbs, Matropolis-Hastings, Hybrid MCMC
 // TODO: Implement LME IRL as containing one IRL problem and an expectation solver
-// TODO: Implement a generic MaxEnt over sequences solver? Or else one for Shervin's style
-// TODO: Implement Robost IRL as containing one generic MaxEnt problem and an expectation solver
+// TODO: Implement Robost IRL as containing a Shervin style problem and an expectation solver
 
+
+class LME_IRL (T ...) {
+
+    Sequence_MaxEnt_Problem!(T) M;
+    Sequence_Distribution_Computer!(T) E;
+    double tolerance;
+    double max_iter;
+
+    public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double tolerance, size_t max_iter) {
+        this.M = M;
+        this.E = E;
+        this.tolerance = tolerance;
+        this.max_iter = max_iter;
+    }
+
+
+    public double [] solve(Sequence!(T)[] trajectories) {
+
+        double [] weights = new double[feature_dim];
+        foreach(ref w; weights)
+            w = uniform(0.01, 0.1);
+
+        size_t iters = 0;
+        bool should_continue = true;
+        
+        do {
+
+            auto expectation_traj = E.to_traj_distr(trajectories, weights);
+
+            auto new_weights = M.solve(expectation_traj);
+
+
+            // decide if we've converged
+
+            should_continue = euclideanDistance(new_weights, weights, tolerance) >= tolerance;
+            iters ++;
+            
+            weights = new_weights;
+            
+        } while (iters < max_iter && should_continue);
+
+        return weights;
+    }
+
+}
