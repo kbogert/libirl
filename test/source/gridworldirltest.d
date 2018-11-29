@@ -3,7 +3,7 @@ module gridworldirltest;
 import gridworld;
 import discretemdp;
 import discretefunctions;
-import featureexpectations;
+import trajectories;
 import tested;
 import std.random;
 import std.math;
