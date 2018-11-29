@@ -771,3 +771,30 @@ unittest {
         assert(results2[key] == (1.0 / size * 2.0), "Multiply on conditional distribution did not work correctly");
     }    
 }    
+
+@name("Standard set ops")
+unittest {
+
+    int size = 10;
+
+
+    testObjSet testSet1 = new testObjSet(size);
+    testObjSet testSet2 = new testObjSet(size * 2);
+
+
+    assert( testSet1.intersectionWith(testSet2).size() == size, "Intersection did not return the correct number of elements, expected " ~ to!string(size) ~ " but got " ~ to!string(testSet1.intersectionWith(testSet2).size()));
+    assert( testSet2.differenceWith(testSet1).size() == size, "Difference did not return the correct number of elements, expected " ~ to!string(size) ~ " but got " ~ to!string(testSet2.differenceWith(testSet1).size()));
+    assert( testSet1.differenceWith(testSet2).size() == 0, "Difference did not return the correct number of elements, expected " ~ to!string(0) ~ " but got " ~ to!string(testSet1.differenceWith(testSet2).size()));
+    assert( testSet1.differenceWith(testSet1).size() == 0, "Difference did not return the correct number of elements, expected " ~ to!string(0) ~ " but got " ~ to!string(testSet1.differenceWith(testSet1).size()));
+
+    auto subset = testSet2.differenceWith(testSet1); // last *size* elements
+
+    assert( testSet1.unionWith(testSet1).size() == (size), "Union did not return the correct number of elements, expected " ~ to!string(size) ~ " but got " ~ to!string(testSet1.unionWith(testSet1).size() == (size * 2)));
+    assert( testSet1.unionWith(subset).size() == (size * 2), "Union did not return the correct number of elements, expected " ~ to!string(size * 2) ~ " but got " ~ to!string(testSet1.unionWith(subset).size() == (size * 2)));
+
+    assert( testSet2.differenceWith(testSet1.intersectionWith(testSet2)).size() == size, "Difference and Intersection did not return the correct number of elements, expected " ~ to!string(size) ~ " but got " ~ to!string(testSet2.differenceWith(testSet1.intersectionWith(testSet2)).size()));
+    assert( testSet1.differenceWith(testSet1.intersectionWith(testSet2)).size() == 0, "Difference and Intersection did not return the correct number of elements, expected " ~ to!string(0) ~ " but got " ~ to!string(testSet1.differenceWith(testSet1.intersectionWith(testSet2)).size()));
+
+    assert( testSet1.intersectionWith(testSet2.differenceWith(testSet1.intersectionWith(testSet2))).size() == 0, "Intersection, Difference and Intersection did not return the correct number of elements, expected " ~ to!string(0) ~ " but got " ~ to!string(testSet1.intersectionWith(testSet2.differenceWith(testSet1.intersectionWith(testSet2))).size()));
+    
+}

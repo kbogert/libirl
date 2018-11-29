@@ -163,7 +163,72 @@ class Set(T ...) {
         return new Set!(NEWDIMS)(newElements);
     }
 
+    public Set!(T) unionWith (Set!(T) other_set) {
 
+        Tuple!(T) [] newElements = storage.dup;
+
+        foreach(newElement ; other_set.storage) {
+            bool is_in_already = false;
+
+            foreach( check ; newElements) {
+                if (check == newElement) {
+                    is_in_already = true;
+                    break;
+                }
+            }
+
+            if (! is_in_already) 
+                newElements ~= newElement;
+                
+        }
+        
+        return new Set!(T)(newElements);
+        
+    }
+
+    public Set!(T) intersectionWith (Set!(T) other_set) {
+        Tuple!(T) [] newElements;
+
+        foreach(newElement ; other_set.storage) {
+            bool is_in_both = false;
+
+            foreach( check ; storage) {
+                if (check == newElement) {
+                    is_in_both = true;
+                    break;
+                }
+            }
+
+            if (is_in_both) 
+                newElements ~= newElement;
+                
+        }
+        return new Set!(T)(newElements);
+    }
+
+    public Set!(T) differenceWith (Set!(T) other_set) {
+        
+        Set!(T) subSet = intersectionWith(other_set);
+        Tuple!(T) [] newElements;
+        
+        foreach(newElement ; storage) {
+            bool is_in_both = false;
+
+            foreach( check ; subSet.storage) {
+                if (check == newElement) {
+                    is_in_both = true;
+                    break;
+                }
+            }
+
+            if (!is_in_both) 
+                newElements ~= newElement;
+                
+        }
+        return new Set!(T)(newElements);
+    }
+
+    
     public Set!( Reverse!(T) ) reverse_params () {
 
         Tuple!(Reverse!(T)) [] newElements = new Tuple!(Reverse!(T)) [storage.length];
