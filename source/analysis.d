@@ -14,29 +14,27 @@ double calcInverseLearningError(Function!(double, State) V_pi_star, Function!(do
 
 double calcInverseLearningError(Model model, Reward true_reward, Reward learned_reward, double tolerance, int max_iter = int.max) {
 
-/*    auto true_model = new BasicModel(model.S(), model.A(), model.T(), true_reward.toFunction(), model.gamma(), model.initialStateDistribution());
-    auto true_value = value_iteration(true_model, tolerance * max ( max( true_reward.toFunction())), max_iter);
-    auto pi_star = optimum_policy(true_value, true_model);
-    auto V_pi_star = value_function_under_policy(true_model, pi_star, tolerance * max ( max( true_reward.toFunction())), max_iter);
+    auto temp_rewards = model.R();
 
-    auto learned_model = new BasicModel(model.S(), model.A(), model.T(), learned_reward.toFunction(), model.gamma(), model.initialStateDistribution());
-    auto learned_value = value_iteration(learned_model, tolerance * max ( max( learned_reward.toFunction())), max_iter);
-    auto pi_L = optimum_policy(learned_value, learned_model);
-    auto V_pi_L = value_function_under_policy(true_model, pi_L, tolerance * max ( max( true_reward.toFunction())), max_iter);
-*/
-
-    auto true_model = new BasicModel(model.S(), model.A(), model.T(), true_reward.toFunction(), model.gamma(), model.initialStateDistribution());
-    auto Q = q_value_iteration(true_model, tolerance * max ( max( true_reward.toFunction())), max_iter);
-    auto pi_star = optimum_policy(Q);
+    try {
+        
+        model.setR(true_reward.toFunction());
+        auto Q = q_value_iteration(model, tolerance * max ( max( true_reward.toFunction())), max_iter);
+        auto pi_star = optimum_policy(Q);
     
-    auto learned_model = new BasicModel(model.S(), model.A(), model.T(), learned_reward.toFunction(), model.gamma(), model.initialStateDistribution());
-    auto learned_value = value_iteration(learned_model, tolerance * max ( max( learned_reward.toFunction())), max_iter);
-    auto pi_L = optimum_policy(learned_value, learned_model);
+        model.setR(learned_reward.toFunction());
+        auto learned_value = value_iteration(model, tolerance * max ( max( learned_reward.toFunction())), max_iter);
+        auto pi_L = optimum_policy(learned_value, model);
 
-    auto V_pi_star = Q.apply(pi_star);
-    auto V_pi_L = Q.apply(pi_L);
+        auto V_pi_star = Q.apply(pi_star);
+        auto V_pi_L = Q.apply(pi_L);
+
+        return calcInverseLearningError(V_pi_star, V_pi_L);
+
+    } finally {
+        model.setR(temp_rewards);
+    }
     
-    return calcInverseLearningError(V_pi_star, V_pi_L);
 }
 
 double learnedBehaviorAccuracy(Model model, Function!(Tuple!(Action), State) true_policy, Function!(Tuple!(Action), State) learned_policy) {

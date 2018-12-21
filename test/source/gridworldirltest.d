@@ -122,11 +122,12 @@ unittest {
         }
         
         auto lr = new LinearReward(features, weights);
-        auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())),  sizeX * sizeY * 10);
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
-        auto policy = soft_max_policy(V, model);
+//        auto policy = soft_max_policy(V, model);
+        auto policy = model.getPolicy();
 //        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
 
@@ -246,7 +247,7 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
@@ -371,7 +372,7 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
@@ -387,7 +388,7 @@ unittest {
 
         // Perform MaxCausalEntIrl_Inf
 
-        auto maxCausalEntIRL = new MaxCausalEntIRL_InfMDP(model, lr, tolerance, weights, value_error);
+        auto maxCausalEntIRL = new MaxCausalEntIRL_InfMDP(model, lr, tolerance, weights);
         
         double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
 
@@ -400,7 +401,7 @@ unittest {
 
         // Perform MaxCausalEntIrl_Approx
         
-        maxCausalEntIRL = new MaxCausalEntIRL_SGDApprox(model, lr, tolerance, weights, value_error);
+        maxCausalEntIRL = new MaxCausalEntIRL_SGDApprox(model, lr, tolerance, weights);
         
         found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
 
@@ -413,7 +414,7 @@ unittest {
 
         // Perform MaxCausalEntIrl_Empirical
         
-        maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights, value_error);
+        maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights);
         
         found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
 

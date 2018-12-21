@@ -486,21 +486,18 @@ import std.stdio;
 
 
 class MaxCausalEntIRL_InfMDP : MaxCausalEntIRL_Ziebart {
-
-    protected double value_error;
     
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
         super(m, lw, tolerance, true_weights);
-        this.value_error = value_error;
     }
     
     override ConditionalDistribution!(Action, State) [] inferenceProcedure (double [] weights, size_t T) {
 
         reward.setWeights(weights);
-        auto m = new BasicModel(model.S(), model.A(), model.T(), reward.toFunction(), model.gamma(), model.initialStateDistribution());
+        model.setR(reward.toFunction());
 
-        auto V_soft = soft_max_value_iteration(m, value_error * max ( max( m.R())), inference_cache);
-        auto policy = soft_max_policy(V_soft, m);
+        auto V_soft = soft_max_value_iteration(model, model.getValueIterationTolerance(), inference_cache);
+        auto policy = soft_max_policy(V_soft, model);
 
         ConditionalDistribution!(Action, State) [] returnval = new ConditionalDistribution!(Action, State) [T];
 
@@ -517,8 +514,8 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
 
     protected Distribution!(State, Action) [] empirical_D_s_a_t;
     
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
-        super(m, lw, tolerance, true_weights, value_error);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
+        super(m, lw, tolerance, true_weights);
     }
 
     override public double [] solve (Sequence!(Distribution!(State, Action)) [] trajectories, bool stochasticGradientDescent = true) {
@@ -595,8 +592,8 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
 
 class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
 
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, double value_error) {
-        super(m, lw, tolerance, true_weights, value_error);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
+        super(m, lw, tolerance, true_weights);
     }
     
     override Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {

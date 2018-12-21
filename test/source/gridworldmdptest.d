@@ -52,7 +52,7 @@ unittest {
         }
     }
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())) );
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
@@ -130,7 +130,7 @@ unittest {
         }
     }
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())));
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
@@ -192,7 +192,7 @@ unittest {
         }
     }
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())));
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
@@ -241,7 +241,7 @@ unittest {
 
     auto transitions = build_simple_transition_function(states, actions, idealStateTransitionProb, & otherActionsErrorFunction);
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())));
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
@@ -311,7 +311,7 @@ unittest {
 
     assert( transitions[ tuple(cast(State)new GridWorldState(3, 3), cast(Action)new GridWorldAction(1, 0)) ][new GridWorldState(4,3)] == idealStateTransitionProb, "Transition function not constructed correctly");
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())));
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 

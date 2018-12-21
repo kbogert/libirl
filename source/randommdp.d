@@ -119,7 +119,7 @@ public BasicModel generateRandomMDP (int state_count, int action_count, double t
     }
     reward_obj = new UniqueFeaturesPerStateActionReward(states, actions, true_weights);
 
-    return new BasicModel(states, actions, transitions, reward_obj.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    return new BasicModel(states, actions, transitions, reward_obj.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), 0.0001 * weight_scale);
 
 }
 

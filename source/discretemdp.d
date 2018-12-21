@@ -34,16 +34,26 @@ class Reward {
 class Model {
 
     abstract Set!(State) S();
+    abstract void setS(Set!(State) s);
 
     abstract Set!(Action) A();
+    abstract void setA(Set!(Action) a);
 
     abstract ConditionalDistribution!(State, State, Action) T();
+    abstract void setT(ConditionalDistribution!(State, State, Action) t);
 
     abstract Function!(double, State, Action) R();
+    abstract void setR(Function!(double, State, Action) r);
 
     abstract double gamma();
-
+    abstract void setGamma(double g);
+    
     abstract Distribution!(State) initialStateDistribution();
+    abstract void setInitialStateDistribution(Distribution!(State) isd);
+
+    abstract ConditionalDistribution!(Action, State) getPolicy();
+
+    abstract double getValueIterationTolerance();
 }
 
 // function which allows for iterative value iteration using a Variant object as a prior
@@ -290,42 +300,121 @@ class BasicModel : Model {
     protected Function!(double, State, Action) rewards;
     protected double gam;
     protected Distribution!(State) isd;
-    
-    public this(Set!(State) states, Set!(Action) actions, ConditionalDistribution!(State, State, Action) transitions, Function!(double, State, Action) rewards, double gamma, Distribution!(State) initialStateDistribution) {
+
+    protected double value_iteration_tolerance;
+    protected int value_iteration_max_iter;
+
+    protected bool policy_cache_valid;
+    protected Variant policy_cache;
+        
+    public this(Set!(State) states, Set!(Action) actions, ConditionalDistribution!(State, State, Action) transitions, Function!(double, State, Action) rewards, double gamma, Distribution!(State) initialStateDistribution, double value_iteration_tolerance, int value_iteration_max_iter = int.max) {
         this.states = states;
         this.actions = actions;
         this.transitions = transitions;
         this.rewards = rewards;
         this.gam = gamma;
         this.isd = initialStateDistribution;
+
+        this.value_iteration_tolerance = value_iteration_tolerance;
+        this.value_iteration_max_iter = value_iteration_max_iter;
+
+        policy_cache_valid = false;
     }
     
     public override Set!(State) S() {
         return states;
     }
 
+    public override void setS(Set!(State) s) {
+        states = s;
+        policy_cache_valid = false;
+    }
+
     public override Set!(Action) A() {
         return actions;
+    }
+
+    public override void setA(Set!(Action) a) {
+        actions = a;
+        policy_cache_valid = false;
     }
 
     public override ConditionalDistribution!(State, State, Action) T() {
         return transitions;
     }
 
+    public override void setT(ConditionalDistribution!(State, State, Action) t) {
+        transitions = t;
+        policy_cache_valid = false;
+    }
+
     public override Function!(double, State, Action) R() {
         return rewards;
+    }
+
+    public override void setR(Function!(double, State, Action) r) {
+        rewards = r;
+        policy_cache_valid = false;
     }
 
     public override double gamma() {
         return gam;
     }
 
+    public override void setGamma(double g) {
+        gam = g;
+        policy_cache_valid = false;
+    }
+        
     public override Distribution!(State) initialStateDistribution() {
         return isd;
     }
+
+    public override void setInitialStateDistribution(Distribution!(State) s) {
+        isd = s;
+        policy_cache_valid = false;
+    }
+
+    public Function!(Tuple!(Action), State) getOptimumPolicy() {
+        if (!policy_cache_valid) {
+            policy_cache = optimum_policy(value_iteration(this, value_iteration_tolerance, value_iteration_max_iter), this);
+            policy_cache_valid = true;
+        }
+
+        return policy_cache.get!(Function!(Tuple!(Action), State));
+        
+    }
+
+    public override ConditionalDistribution!(Action, State) getPolicy() {
+        return to_stochastic_policy(getOptimumPolicy(), actions);
+    }
+
+    public override double getValueIterationTolerance() {
+        return value_iteration_tolerance;
+    }
 }
 
+class SoftMaxModel : BasicModel {
 
+    public this(Set!(State) states, Set!(Action) actions, ConditionalDistribution!(State, State, Action) transitions, Function!(double, State, Action) rewards, double gamma, Distribution!(State) initialStateDistribution, double value_iteration_tolerance, int value_iteration_max_iter = int.max) {
+        super(states, actions, transitions, rewards, gamma, initialStateDistribution, value_iteration_tolerance, value_iteration_max_iter);
+    }
+
+    public override Function!(Tuple!(Action), State) getOptimumPolicy() {
+        throw new Exception("SoftMaxModel does not support an optimum policy, use getPolicy() instead");
+    }
+    
+    public override ConditionalDistribution!(Action, State) getPolicy() {
+        if (!policy_cache_valid) {
+            policy_cache = soft_max_policy(soft_max_value_iteration(this, value_iteration_tolerance, value_iteration_max_iter), this);
+            policy_cache_valid = true;
+        }
+
+        return policy_cache.get!(ConditionalDistribution!(Action, State));        
+    }
+}
+
+    
 class LinearReward : Reward {
 
     protected double [] weights;
