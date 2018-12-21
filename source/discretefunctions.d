@@ -1056,8 +1056,16 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
             
         }
     }
+/*
+    // division with a distribution over some of the parameters, Pr(A , B) / Pr(B) = Pr (A | B) and Pr(A , B) / Pr(A) = Pr (B | A)
+    ConditionalDistribution!( removeFirst!(DIMS), DIMS ) opBinary(string op, DIMS...)(Distribution!(DIMS) other)
+        if (DIMS.length > 0 && (op="/") && allSatisfy!(dimOfSet, DIMS) && removeFirst!(DIMS).length == (PARAMS.length - DIMS.length)
+        && DIMS.length < PARAMS.length && dimOrderingCorrectForward!(DIMS.length, DIMS, PARAMS)) 
+    {
 
-
+    }
+*/
+    
     public void normalize() {
         if (normalized) return;
 
@@ -1221,6 +1229,32 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         if (PARAMS.length > 0 && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
         return flatten().opBinary!(op)(other);
+    }
+
+    // multiplication with a distribution over the parameters, Pr(A | B) * Pr(B) = Pr(A , B)
+    Distribution!(OVER, PARAMS) opBinary(string op)(Distribution!(PARAMS) other) 
+        if (PARAMS.length > 0 && (op=="*"))
+    {
+        Distribution!(OVER, PARAMS) returnval = new Distribution!(OVER, PARAMS)(over_param_set.cartesian_product(mySet), 0.0);
+
+        foreach (key1 ; mySet) {
+
+            Distribution!(OVER)* p;
+            p = (key1 in storage);
+            if (p ! is null) {
+                foreach (key2; over_param_set) {
+
+                    auto fullkey = tuple(key2[], key1[]);
+
+                    auto element = (*p)[key2];
+
+                    returnval[fullkey] = element * other[key1];
+                
+                }
+            }
+        }
+
+        return returnval;
     }
 
     // operation with the over params function (vector op)

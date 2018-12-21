@@ -81,3 +81,114 @@ public Sequence!(Distribution!(State, Action))[] traj_to_traj_distr( Sequence!(S
     
 }
 
+
+// Takes incompletely observed trajectories and converts them to trajectory distributions
+// Exact version, interates through all possible trajectories using a forward-backword algorithm
+class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(State, Action) {
+
+    bool extend_terminals_to_equal_length;
+    Model m;
+    LinearReward r;
+    
+    public this(Model m, LinearReward r, bool extend_terminals_to_equal_length = true) {
+        this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
+        this.m = m;
+        this.r = r;
+    }
+
+    public Sequence!(Distribution!(State, Action))[] to_traj_distr( Sequence!(State, Action)[] trajectories, double [] weights ) {
+
+        r.setWeights(weights);
+        m.setR(r.toFunction());
+        
+        auto policy = m.getPolicy();
+
+        auto full_space = m.S().cartesian_product(m.A());
+        
+        Sequence!(Distribution!(State, Action))[] returnval = new Sequence!(Distribution!(State, Action))[trajectories.length];
+
+        size_t max_traj_length = 0;
+        foreach (t ; trajectories)
+            if (t.length() > max_traj_length)
+                max_traj_length = t.length();
+
+        // forward step
+        foreach(i, traj ; trajectories) {
+
+            Sequence!(Distribution!(State, Action)) seq = new Sequence!(Distribution!(State, Action))(traj.length());
+            foreach(t, timestep ; traj) {
+                Distribution!(State, Action) dist;
+
+                if (timestep[0] is null) {
+                    // state is missing
+                    if (t == 0) {
+                        // first timestep, use initial state distribution
+                        auto temp_state_dist = m.initialStateDistribution();
+
+                        dist = policy * temp_state_dist;
+
+                    } else {
+                        dist = timestep(traj[t-1], policy);
+                    }
+                    
+                } else if (timestep[1] is null) {
+                    // action is missing
+                    auto temp_state_dist = new Distribution!(State)(m.S(), 0.0);
+                    temp_state_dist[timestep[0]] = 1.0;
+                    dist = policy * temp_state_dist;
+                    
+                } else {
+                    // neither are missing
+                    dist = new Distribution!(State, Action)(full_space, 0.0);
+                    dist[timestep] = 1.0;
+                }
+
+                seq[t] = tuple(dist);
+            }
+
+            if (traj[$][0].isTerminal() && extend_terminals_to_equal_length ) {
+
+                while( seq.length() < max_traj_length) {
+                    seq ~= seq[$];
+                }
+            }
+            
+            returnval[i] = seq;
+        }
+
+        // reverse step
+        foreach(i, traj ; returnval) {
+
+            foreach_reverse(t, ref timestep ; traj) {
+
+                // optimization, we don't need to calculate anything if the state and action were observed
+                if (! (trajectories[i].length > t && trajectories[i][t][0] ! is null && trajectories[i][t][1] ! is null)) {
+
+                    if (t < traj.length - 1) {
+                        timestep = tuple(reverse_timestep(timestep[0], traj[t+1][0]));
+                    }
+                }
+            }
+            
+        }
+
+        return returnval;
+
+    }
+    
+    protected Distribution!(State, Action) timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy) {
+
+        auto returnval = policy * sumout!(State)(sumout!(Action)( m.T() * previous_timestep));
+//        returnval.normalize();
+        return returnval;
+
+    }
+
+    protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) current_timestep, Distribution!(State, Action) next_timestep) {
+
+        auto returnval = sumout!(State)( ((m.T() * current_timestep) / sumout!(Action)(next_timestep ) ).flatten() );
+        returnval.normalize();
+        return returnval;
+    }
+}
+
