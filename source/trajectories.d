@@ -128,7 +128,7 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
                         dist = policy * temp_state_dist;
 
                     } else {
-                        dist = timestep(traj[t-1], policy);
+                        dist = forward_timestep(seq[t-1][0], policy);
                     }
                     
                 } else if (timestep[1] is null) {
@@ -176,17 +176,17 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
 
     }
     
-    protected Distribution!(State, Action) timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy) {
+    protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy) {
 
-        auto returnval = policy * sumout!(State)(sumout!(Action)( m.T() * previous_timestep));
-//        returnval.normalize();
+        auto returnval = policy * new Distribution!(State)(sumout!(Action)(sumout!(State)( (m.T() * previous_timestep).reverse_params())));
+        returnval.normalize();        
         return returnval;
 
     }
 
     protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) current_timestep, Distribution!(State, Action) next_timestep) {
 
-        auto returnval = sumout!(State)( ((m.T() * current_timestep) / sumout!(Action)(next_timestep ) ).flatten() );
+        auto returnval = new Distribution!(State, Action)(sumout!(State)( ((m.T() * current_timestep) * sumout!(Action)(next_timestep ) ) ) );
         returnval.normalize();
         return returnval;
     }

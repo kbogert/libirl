@@ -141,7 +141,7 @@ class Set(T ...) {
     }
 
 
-    Set!( AliasSeq!(T, A) ) cartesian_product(A) (Set!(A) a) {
+    Set!( AliasSeq!(T, A) ) cartesian_product(A ...) (Set!(A) a) {
 
         alias NEWDIMS = AliasSeq!(T, A);
 
@@ -162,7 +162,7 @@ class Set(T ...) {
 
         return new Set!(NEWDIMS)(newElements);
     }
-
+        
     public Set!(T) unionWith (Set!(T) other_set) {
 
         Tuple!(T) [] newElements = storage.dup;
@@ -1232,7 +1232,8 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     }
 
     // multiplication with a distribution over the parameters, Pr(A | B) * Pr(B) = Pr(A , B)
-    Distribution!(OVER, PARAMS) opBinary(string op)(Distribution!(PARAMS) other) 
+    // The next function proved more popular (Pr(A | B) * Pr(B) = Pr(B , A) )
+/*    Distribution!(OVER, PARAMS) opBinary(string op)(Distribution!(PARAMS) other) 
         if (PARAMS.length > 0 && (op=="*"))
     {
         Distribution!(OVER, PARAMS) returnval = new Distribution!(OVER, PARAMS)(over_param_set.cartesian_product(mySet), 0.0);
@@ -1256,7 +1257,34 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 
         return returnval;
     }
+*/
 
+    // multiplication with a distribution over the parameters, Pr(A | B) * Pr(B) = Pr(B , A)
+    Distribution!(PARAMS, OVER) opBinary(string op)(Distribution!(PARAMS) other) 
+        if (PARAMS.length > 0 && (op=="*"))
+    {
+        Distribution!(PARAMS, OVER) returnval = new Distribution!(PARAMS, OVER)(mySet.cartesian_product(over_param_set), 0.0);
+
+        foreach (key1 ; mySet) {
+
+            Distribution!(OVER)* p;
+            p = (key1 in storage);
+            if (p ! is null) {
+                foreach (key2; over_param_set) {
+
+                    auto fullkey = tuple(key1[], key2[]);
+
+                    auto element = (*p)[key2];
+
+                    returnval[fullkey] = element * other[key1];
+                
+                }
+            }
+        }
+
+        return returnval;
+    }
+    
     // operation with the over params function (vector op)
     Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
         if (PARAMS.length > 0 && ((op=="+"||op=="-"||op=="*"||op=="/")))
