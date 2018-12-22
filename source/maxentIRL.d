@@ -624,24 +624,22 @@ class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
 
 class LME_IRL (T ...) {
 
-    Sequence_MaxEnt_Problem!(T) M;
-    Sequence_Distribution_Computer!(T) E;
-    double tolerance;
-    double max_iter;
+    protected Sequence_MaxEnt_Problem!(T) M;
+    protected Sequence_Distribution_Computer!(T) E;
+    protected double tolerance;
+    protected double max_iter;
 
-    public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double tolerance, size_t max_iter) {
+    public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double EM_tolerance, size_t EM_max_iter) {
         this.M = M;
         this.E = E;
-        this.tolerance = tolerance;
-        this.max_iter = max_iter;
+        this.tolerance = EM_tolerance;
+        this.max_iter = EM_max_iter;
     }
 
 
-    public double [] solve(Sequence!(T)[] trajectories) {
+    public double [] solve(Sequence!(T)[] trajectories, double [] initial_weights) {
 
-        double [] weights = new double[feature_dim];
-        foreach(ref w; weights)
-            w = uniform(0.01, 0.1);
+        double [] weights = initial_weights.dup;
 
         size_t iters = 0;
         bool should_continue = true;
