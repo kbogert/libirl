@@ -47,6 +47,10 @@ class RandomMDPAction : discretemdp.Action {
         this.id = id;
     }
     
+    public int getID() {
+        return id;
+    }
+     
     public override string toString() {
         return "Action: " ~ to!string(id);
     }

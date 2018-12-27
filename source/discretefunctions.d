@@ -907,7 +907,15 @@ class Function (RETURN_TYPE, PARAM ...) {
             auto val = storage.get(key, funct_default);
 
             foreach (k ; key) {
-                returnval ~= to!string(k) ~ ", ";
+                static if (isTuple!(typeof(k))) {
+                    returnval ~= "(";
+                    foreach(k2 ; k) {
+                        returnval ~= to!string(k2) ~ ", ";
+                    }
+                    returnval ~= ") ";
+                } else {
+                    returnval ~= to!string(k) ~ ", ";
+                }
             }
             static if (isTuple!(typeof(val))) {
                 returnval ~= " => ";
@@ -990,6 +998,7 @@ enum DistInitType {None, Uniform, Exponential, RandomFromGaussian};
 class Distribution(PARAMS...) : Function!(double, PARAMS) {
 
     protected bool normalized;
+    protected double normal;
 
     public this(Function!(double, PARAMS) init) {
         super(init);
@@ -1066,8 +1075,8 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
     }
 */
     
-    public void normalize() {
-        if (normalized) return;
+    public double normalize() {
+        if (normalized) return normal;
 
         auto tot = 0.0;
         foreach(key ; mySet) {
@@ -1083,6 +1092,8 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
         }
 
         normalized = true;
+        normal = tot;
+        return tot;
      }
 
      public bool isNormalized() {
@@ -1165,12 +1176,23 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
 
 // a specialized distribution, basically a function that returns distributions
 // only need a conditional distributions over single sets right now
-class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), PARAMS) {
+
+template ConditionalDistribution(OVER, PARAMS...) {
+
+    // This flattens out the conditional distribution, but I'm not sure I want to do so
+//static if (isTuple!(OVER)) {
+//    alias OVER_2 = OVER.Types;
+//} else {
+    alias OVER_2 = OVER;
+//}
+    
+class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS) 
+{
 
     // need this to create distributions, for instance when accessing a param set that hasn't already been inserted
-    Set!OVER over_param_set;
+    Set!(OVER_2) over_param_set;
     
-    public this (Distribution!OVER [Tuple!(PARAMS)] init, Set!(PARAMS) param_set) {
+    public this (Distribution!OVER_2 [Tuple!(PARAMS)] init, Set!(PARAMS) param_set) {
 
         if (init.length == 0) {
             throw new Exception("Initial distribution cannot be empty");
@@ -1181,32 +1203,34 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         super(param_set, init);
     }
 
-    public this (Set!(OVER) over_params, Set!(PARAMS) param_set) {
+    public this (Set!(OVER_2) over_params, Set!(PARAMS) param_set) 
+    {
         over_param_set = over_params;
-        super(param_set, new Distribution!(OVER)(over_params));
+        super(param_set, new Distribution!(OVER_2)(over_params));
     }
-    
-    public this (Set!(OVER) over_params, Set!(PARAMS) param_set, double [Tuple!(OVER)] [Tuple!(PARAMS)] init) {
 
-        Distribution!(OVER) [Tuple!(PARAMS)] builtDistr;
+    public this (Set!(OVER_2) over_params, Set!(PARAMS) param_set, double [Tuple!(OVER_2)] [Tuple!(PARAMS)] init) {
+
+        Distribution!(OVER_2) [Tuple!(PARAMS)] builtDistr;
 
         foreach(key, val ; init) {
-            builtDistr[key] = new Distribution!(OVER)(over_params, val);
+            builtDistr[key] = new Distribution!(OVER_2)(over_params, val);
         }
         this(builtDistr, param_set);
         
     }
-    
+
+
     // converts this structured function into a flat one that doesn't have any distribution features
-    public Function!(double, PARAMS, OVER) flatten() {
+    public Function!(double, PARAMS, OVER_2) flatten() {
 
         auto combined_params = param_set.cartesian_product(over_param_set);
 
 
-        double [Tuple!(PARAMS, OVER)] tempArray;
+        double [Tuple!(PARAMS, OVER_2)] tempArray;
         
         foreach(key1; param_set) {
-            Distribution!(OVER)* p;
+            Distribution!(OVER_2)* p;
             p = (key1 in storage);
             if (p ! is null) {
                 foreach(key2; over_param_set) {
@@ -1221,11 +1245,11 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
             }
         }
 
-        return new Function!(double, PARAMS, OVER)(combined_params, tempArray, 0.0);
+        return new Function!(double, PARAMS, OVER_2)(combined_params, tempArray, 0.0);
     }
 
     // operation with a same sized function (matrix op)
-    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, PARAMS, OVER) other) 
+    Function!(double, PARAMS, OVER_2) opBinary(string op)(Function!(double, PARAMS, OVER_2) other) 
         if (PARAMS.length > 0 && (op=="+"||op=="-"||op=="*"||op=="/"))
     {
         return flatten().opBinary!(op)(other);
@@ -1260,14 +1284,14 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
 */
 
     // multiplication with a distribution over the parameters, Pr(A | B) * Pr(B) = Pr(B , A)
-    Distribution!(PARAMS, OVER) opBinary(string op)(Distribution!(PARAMS) other) 
+    Distribution!(PARAMS, OVER_2) opBinary(string op)(Distribution!(PARAMS) other) 
         if (PARAMS.length > 0 && (op=="*"))
     {
-        Distribution!(PARAMS, OVER) returnval = new Distribution!(PARAMS, OVER)(mySet.cartesian_product(over_param_set), 0.0);
+        Distribution!(PARAMS, OVER_2) returnval = new Distribution!(PARAMS, OVER_2)(mySet.cartesian_product(over_param_set), 0.0);
 
         foreach (key1 ; mySet) {
 
-            Distribution!(OVER)* p;
+            Distribution!(OVER_2)* p;
             p = (key1 in storage);
             if (p ! is null) {
                 foreach (key2; over_param_set) {
@@ -1286,40 +1310,40 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
     }
     
     // operation with the over params function (vector op)
-    Function!(double, PARAMS, OVER) opBinary(string op)(Function!(double, OVER) other) 
+    Function!(double, PARAMS, OVER_2) opBinary(string op)(Function!(double, OVER_2) other) 
         if (PARAMS.length > 0 && ((op=="+"||op=="-"||op=="*"||op=="/")))
     {
         return flatten().opBinary!(op)(other);
     }
 
     // operation with a single value (scalar op)
-    Function!(RETURN_TYPE, PARAMS, OVER) opBinary(string op)(double scalar) 
+    Function!(RETURN_TYPE, PARAMS, OVER_2) opBinary(string op)(double scalar) 
         if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
         auto combined_params = param_set.cartesian_product(over_param_set);
 
-        Function!(double, PARAMS, OVER) returnval = new Function!(double, PARAMS, OVER)(combined_params);
+        Function!(double, PARAMS, OVER_2) returnval = new Function!(double, PARAMS, OVER_2)(combined_params);
 
         foreach(key; param_set) {
             foreach(key2; over_param_set) {
                 auto fullKey = tuple(key1[], key2[]);
 
-                mixin("returnval[fullkey] = storage.get(key1, new Distribution!(OVER)(over_params))[key2] " ~ op ~ " scalar;");
+                mixin("returnval[fullkey] = storage.get(key1, new Distribution!(OVER_2)(over_params))[key2] " ~ op ~ " scalar;");
             }
         }
 
         return returnval;        
     }
     
-    Function!(RETURN_TYPE, PARAMS, OVER) opBinaryRight(string op)(double scalar) 
+    Function!(RETURN_TYPE, PARAMS, OVER_2) opBinaryRight(string op)(double scalar) 
         if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
 
         return opBinary!(op)(scalar);
     }
 
-    override Distribution!(OVER) opIndex(Tuple!(PARAMS) i ) {
-        Distribution!(OVER) * p;
+    override Distribution!(OVER_2) opIndex(Tuple!(PARAMS) i ) {
+        Distribution!(OVER_2) * p;
         p = (i in storage);
         if (p !is null) {
             return *p;
@@ -1327,13 +1351,12 @@ class ConditionalDistribution(OVER, PARAMS...) : Function!(Distribution!(OVER), 
         if ( mySet !is null && ! mySet.contains(i)) {
             throw new Exception("ERROR, key is not in the set this function is defined over.");
         }
-        storage[i] = new Distribution!(OVER)(over_param_set);
+        storage[i] = new Distribution!(OVER_2)(over_param_set);
         return storage[i];
     }
 
 }
-
-
+}
 /*
 class ConditionalDistribution(SPLIT, PARAMS...) : Function!(Distribution!(PARAMS[0..SPLIT]), PARAMS[SPLIT..PARAMS.length]) {
 
@@ -1558,4 +1581,86 @@ class NumericSetSpace : discretefunctions.Set!(size_t) {
     public this (size_t count) {
         this(0, count);
     }
+}
+
+Set!(Tuple!(T)) pack_set(T...)(Set!(T) to_pack) {
+    Tuple!(Tuple!(T)) [] tuple_arr = new Tuple!(Tuple!(T)) [to_pack.size()];
+
+    size_t i = 0;
+    foreach (a ; to_pack) {
+        tuple_arr[i] = tuple(a);
+        i ++;
+    }
+        
+    return new Set!(Tuple!(T))(tuple_arr);
+
+}
+
+Function!(RETURN_TYPE, Tuple!(PARAM)) pack_function(RETURN_TYPE, PARAM...)(Function!(RETURN_TYPE, PARAM) to_pack) {
+
+    auto space = pack_set(to_pack.param_set());
+
+    RETURN_TYPE [Tuple!(Tuple!(PARAM))] arr;
+
+    foreach(p, val ; to_pack.storage) {
+
+        arr [ tuple(p) ] = val;
+    }
+    
+    return new Function!(RETURN_TYPE, Tuple!(PARAM))(space, arr, to_pack.funct_default);
+}
+
+
+Distribution!(Tuple!(PARAM)) pack_distribution(PARAM...)(Distribution!(PARAM) to_pack) {
+
+    auto f = pack_function(to_pack);
+
+    auto returnval = new Distribution!(Tuple!(PARAM))(f);
+
+    returnval.normalized = to_pack.normalized;
+    returnval.normal = to_pack.normal;
+
+    return returnval;
+}
+
+
+Set!(T) unpack_set(T...)(Set!(Tuple!(T)) to_unpack) {
+    Tuple!(T) [] tuple_arr = new Tuple!(T) [to_unpack.size()];
+
+    size_t i = 0;
+    foreach (a ; to_unpack) {
+        tuple_arr[i] = a[0];
+        i ++;
+    }
+        
+    return new Set!(T)(tuple_arr);
+
+}
+
+Function!(RETURN_TYPE, PARAM) unpack_function(RETURN_TYPE, PARAM...)(Function!(RETURN_TYPE, Tuple!(PARAM)) to_unpack) {
+
+    auto space = unpack_set(to_unpack.param_set());
+
+    RETURN_TYPE [Tuple!(PARAM)] arr;
+
+    foreach(p, val ; to_unpack.storage) {
+
+        arr [ p[0] ] = val;
+    }    
+
+    return new Function!(RETURN_TYPE, PARAM)(space, arr, to_unpack.funct_default);
+
+}
+
+
+Distribution!(PARAM) unpack_distribution(PARAM...)(Distribution!(Tuple!(PARAM)) to_unpack) {
+
+    auto f = unpack_function(to_unpack);
+
+    auto returnval = new Distribution!(PARAM)(f);
+
+    returnval.normalized = to_unpack.normalized;
+    returnval.normal = to_unpack.normal;
+
+    return returnval;
 }
