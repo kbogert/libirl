@@ -1,18 +1,20 @@
-module trajectorytest;
+module occlusiontest;
 
 import tested;
 import randommdp;
 import discretemdp;
 import discretefunctions;
+import occlusion;
 import std.typecons;
-import trajectories;
-import std.math;
 import std.conv;
 import std.random;
+import std.math;
+import gridworld;
 
 import std.stdio;
 
-@name("Deterministic Trajectory Missing Data test")
+
+@name("Deterministic trajectory occlusion simple test")
 unittest {
 
 
@@ -46,6 +48,12 @@ unittest {
         }
     }
 
+    Tuple!(State) [] occ = new Tuple!(State)[1];
+    occ[0] = states.toArray()[1];
+    Set!State occluded_states = new Set!(State)(occ);
+    Set!State[] occluded_states_arr = new Set!State[3];
+    occluded_states_arr[] = occluded_states;
+    
     double [] true_weights = new double[3 * 2];
     foreach (ref w ; true_weights) {
         w = 0;
@@ -68,7 +76,7 @@ unittest {
     
     // the missing entry is obviously 1 => 1
 
-    ExactPartialTrajectoryToTrajectoryDistr trajectoryCalc = new ExactPartialTrajectoryToTrajectoryDistr(model, reward_obj );
+    ExactOccludedTrajectoryToTrajectoryDistr trajectoryCalc = new ExactOccludedTrajectoryToTrajectoryDistr(model, reward_obj, occluded_states_arr );
 
     auto distr = trajectoryCalc.to_traj_distr(arr, true_weights);
 
@@ -77,77 +85,10 @@ unittest {
     assert(distr[0][1][0][tuple(states.toArray()[1][0], actions.toArray()[1][0])] == 1, "Trajectory calc failed in unknown entry");
     assert(distr[0][2][0][tuple(states.toArray()[2][0], actions.toArray()[0][0])] == 1, "Trajectory calc failed in third entry");
     
-
-}
-
-@name("Markov Smoother test")
-unittest {
-
-    // Using the umbrella example from Russell and Norvig
-    auto states = new NumericSetSpace(1, 3);
-
-    double [Tuple!(size_t)][Tuple!(size_t)] init_states;
-    init_states[tuple(1UL)][tuple(1UL)] = 0.7;
-    init_states[tuple(1UL)][tuple(2UL)] = 0.3;
-    init_states[tuple(2UL)][tuple(1UL)] = 0.3;
-    init_states[tuple(2UL)][tuple(2UL)] = 0.7;
-    
-    auto transitions = new ConditionalDistribution!(size_t, size_t)(states, states, init_states) ;   
-
-
-    auto observations = new Sequence!(Distribution!(size_t))(5);
-
-    double [Tuple!(size_t)] obs0;
-    obs0[tuple(1UL)] = 0.9;
-    obs0[tuple(2UL)] = 0.2;
-    
-    observations[0] = tuple(new Distribution!(size_t)(states, obs0));
-
-    double [Tuple!(size_t)] obs1;
-    obs1[tuple(1UL)] = 0.9;
-    obs1[tuple(2UL)] = 0.2;
-    
-    observations[1] = tuple(new Distribution!(size_t)(states, obs1));
-
-    double [Tuple!(size_t)] obs2;
-    obs2[tuple(1UL)] = 0.1;
-    obs2[tuple(2UL)] = 0.8;
-    
-    observations[2] = tuple(new Distribution!(size_t)(states, obs2));
-    
-    double [Tuple!(size_t)] obs3;
-    obs3[tuple(1UL)] = 0.9;
-    obs3[tuple(2UL)] = 0.2;
-    
-    observations[3] = tuple(new Distribution!(size_t)(states, obs3));
-
-    double [Tuple!(size_t)] obs4;
-    obs4[tuple(1UL)] = 0.9;
-    obs4[tuple(2UL)] = 0.2;
-    
-    observations[4] = tuple(new Distribution!(size_t)(states, obs4));
-
-
-    auto initial = new Distribution!(size_t)(states, DistInitType.Uniform);
-    
-    auto results = SequenceMarkovChainSmoother!(size_t)(observations, transitions, initial);
-
-    assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1");
-    assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2");
-    assert(approxEqual(results[2][0][tuple(1UL)], 0.3075), "Markov Smoother 3");    
-    assert(approxEqual(results[3][0][tuple(1UL)], 0.8204), "Markov Smoother 4");
-    assert(approxEqual(results[4][0][tuple(1UL)], 0.8637), "Markov Smoother 5");
-
-    assert(results[0][0].isNormalized(), "Not Normalized");
-    assert(results[1][0].isNormalized(), "Not Normalized");
-    assert(results[2][0].isNormalized(), "Not Normalized");
-    assert(results[3][0].isNormalized(), "Not Normalized");
-    assert(results[4][0].isNormalized(), "Not Normalized");
-     
 }
 
 
-@name("Stochastic Trajectory Missing Data test")
+@name("Random MDP occlusion test")
 unittest {
 
 
@@ -203,6 +144,10 @@ unittest {
 
     auto model = new BasicModel(states, actions, transitions, reward_obj.toFunction(), 0.95, new Distribution!(State)(states, DistInitType.Uniform), 0.1);
 
+    Tuple!(State) [] occ = new Tuple!(State)[1];
+    occ[0] = states.toArray()[1];
+    Set!State occluded_states = new Set!(State)(occ);
+    
  //   writeln(model.getOptimumPolicy());
     auto traj = new Sequence!(State, Action)(3);
 
@@ -216,8 +161,8 @@ unittest {
     
     // the missing entry is obviously 1 => 1
 
-    auto trajectoryCalc = new ExactPartialTrajectoryToTrajectoryDistr(model, reward_obj );
-    auto controlCalc = new MarkovSmootherExactPartialTrajectoryToTrajectoryDistr(model, reward_obj );
+    auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, reward_obj, occluded_states, 4 );
+    auto controlCalc = new MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr(model, reward_obj, occluded_states, 4 );
 
     auto distr = trajectoryCalc.to_traj_distr(arr, true_weights);
     auto controlDistr = controlCalc.to_traj_distr(arr, true_weights);
@@ -262,30 +207,140 @@ unittest {
         UniqueFeaturesPerStateActionReward lr;
         model = generateRandomMDP(5, 3, 10, 1, 0.95, lr);
 
-        trajectoryCalc = new ExactPartialTrajectoryToTrajectoryDistr(model, lr );
-        controlCalc = new MarkovSmootherExactPartialTrajectoryToTrajectoryDistr(model, lr );
+        occluded_states = randomOccludedStates(model, uniform(1, 5));
+        
+        trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 15 );
+        controlCalc = new MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 15 );
 
-                
         // generate random trajectories with random missing timesteps
         arr[0] = simulate(model, model.getPolicy(), uniform(10, 15), model.initialStateDistribution());
 
-        foreach(j; 0 .. arr[0].length) {
-            if (uniform01() < 0.15) {
-                arr[0][j] = Tuple!(State, Action)(null, null);
-            }
-        }        
+        arr[0] = removeOccludedTimesteps(arr[0], occluded_states);        
 
+//        writeln("traj ", arr[0]);
         distr = trajectoryCalc.to_traj_distr(arr, lr.getWeights());
         controlDistr = controlCalc.to_traj_distr(arr, lr.getWeights());
 
         foreach (s; model.S()) {
             foreach (a; model.A()) {
                 foreach(t; 0 .. arr[0].length) {
-
                     assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "3 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
                 }
             }
         }
     }
     
+}
+
+
+@name("Gridworld MDP occlusion test")
+unittest {
+
+    int sizeX = 10;
+    int sizeY = 10;
+    double gamma = 0.95;
+    double value_error = 0.1;
+
+    auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
+    auto optimal_action = new GridWorldAction(1, 0) ;    
+
+    GridWorldStateSpace states = new GridWorldStateSpace(sizeX, sizeY);
+    GridWorldActionSpace actions = new GridWorldActionSpace();
+
+    Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), [0]);
+
+    foreach (a ; actions) {
+        features[ optimal_state , a[0] ] = [1.0];
+    }
+
+    auto lr = new LinearReward(features, [1.0]);
+
+    auto transitions = new ConditionalDistribution!(State, State, Action)(states, states.cartesian_product(actions));
+
+    foreach (s ; states) {
+        foreach (a ; actions) {
+
+            auto newState = (cast(GridWorldAction)a[0]).getIdealStateFor(cast(GridWorldState)s[0]);
+
+            Distribution!State ds = new Distribution!(State)(states, 0.0);
+
+            if (states.contains(cast(State)newState)) {
+                ds[newState] = 1.0;
+            } else {
+                ds[s[0]] = 1.0;
+            }
+
+            ds.normalize();
+            
+            transitions[s[0], a[0]] = ds;
+        }
+    }
+
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())) );
+
+    // random occlusion
+    foreach (i; 0 .. 10) {
+
+        auto occluded_states = randomOccludedStates(model, uniform(cast(int)(0.1 * (sizeX * sizeY)), cast(int)(0.8 * (sizeX * sizeY))));
+        
+        auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
+        auto controlCalc = new MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
+
+        // generate random trajectories with random missing timesteps
+        auto arr = new Sequence!(State, Action)[1];
+        arr[0] = simulate(model, model.getPolicy(), uniform(15, 20), model.initialStateDistribution());
+
+        arr[0] = removeOccludedTimesteps(arr[0], occluded_states);        
+
+//        writeln("traj ", arr[0]);
+        auto distr = trajectoryCalc.to_traj_distr(arr, lr.getWeights());
+writeln("rand");        
+        auto controlDistr = controlCalc.to_traj_distr(arr, lr.getWeights());
+
+        foreach (s; model.S()) {
+            foreach (a; model.A()) {
+                foreach(t; 0 .. arr[0].length) {
+                    assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "4 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
+                }
+            }
+        }
+writeln("rand2");        
+    }
+
+    // chunks of the gridworld occluded
+    foreach (i; 0 .. 16) {
+
+        Tuple!(State) [] occ = new Tuple!(State)[(sizeX * sizeY) / 4];
+
+        size_t count = 0;
+        foreach (x ; 0 .. sizeX / 2) {
+            foreach(y ; 0 .. sizeY / 2) {
+                occ[count] = tuple(new GridWorldState((i % 2) * (sizeX / 2) + x, (i / 2) % 2 * (sizeY / 2) + y));
+                count ++;
+            }
+        }
+        
+        auto occluded_states = new Set!State(occ);
+        
+        auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
+        auto controlCalc = new MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
+
+        // generate random trajectories with random missing timesteps
+        auto arr = new Sequence!(State, Action)[1];
+        arr[0] = simulate(model, model.getPolicy(), uniform(15, 20), model.initialStateDistribution());
+
+        arr[0] = removeOccludedTimesteps(arr[0], occluded_states);        
+
+//        writeln("traj ", arr[0]);
+        auto distr = trajectoryCalc.to_traj_distr(arr, lr.getWeights());
+        auto controlDistr = controlCalc.to_traj_distr(arr, lr.getWeights());
+
+        foreach (s; model.S()) {
+            foreach (a; model.A()) {
+                foreach(t; 0 .. arr[0].length) {
+                    assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "5 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
+                }
+            }
+        }
+    }    
 }

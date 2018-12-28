@@ -2,7 +2,6 @@ module app;
 
 import tested;
 
-
 void main()
 {
 	version (unittest) {} else {
@@ -19,13 +18,17 @@ shared static this()
         import gridworldirltest;
         import discretefunctionstest;
         import randommdptest;
-        
+        import trajectorytest;
+        import occlusiontest;
+                        
 		import core.runtime;
 		Runtime.moduleUnitTester = () => true;
 //		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
 
         bool allSuccessful = true;
         
+		allSuccessful &= runUnitTests!(occlusiontest)(new ConsoleTestResultWriter);
+		allSuccessful &= runUnitTests!(trajectorytest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(randommdptest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(gridworldmdptest)(new ConsoleTestResultWriter);
 		allSuccessful &= runUnitTests!(gridworldirltest)(new ConsoleTestResultWriter);

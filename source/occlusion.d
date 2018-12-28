@@ -6,6 +6,7 @@ import trajectories;
 import std.typecons;
 import std.algorithm.comparison;
 import std.random;
+import std.stdio;
 
 
 public Set!State randomOccludedStates(Model m, int num_occluded_states) {
@@ -45,15 +46,70 @@ public Sequence!(State, Action)[] removeOccludedTimesteps (Sequence!(State, Acti
 }
 
 
+
+// compute the trajectory distribution assuming missing nodes are caused by occlusion.
+// the missing states could only be those which are in the set of occluded states
+class ExactOccludedTrajectoryToTrajectoryDistr : ExactPartialTrajectoryToTrajectoryDistr {
+
+    protected Distribution!(State)[] occluded_states_distr;
+
+    
+    public this(Model m, LinearReward r, Set!State[] occluded_states_array, bool extend_terminals_to_equal_length = true) {
+
+        occluded_states_distr = new Distribution!(State)[occluded_states_array.length];
+
+        foreach (i, occluded_states ; occluded_states_array) {        
+            occluded_states_distr[i] = new Distribution!(State)(m.S(), 0.0);
+            foreach( s ; occluded_states) {
+                occluded_states_distr[i][s[0]] = 1.0 / occluded_states.size();
+            }
+        }
+        super(m, r, extend_terminals_to_equal_length);
+    }
+
+    override protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy, size_t timestep) {
+
+        auto returnval = policy * new Distribution!(State)(sumout!(Action)(sumout!(State)( (m.T() * previous_timestep).reverse_params())) * occluded_states_distr[timestep]);
+//        returnval.normalize();
+        return returnval;
+
+    }
+
+    override protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) current_timestep, Distribution!(State, Action) next_timestep, size_t timestep) {
+        current_timestep = new Distribution!(State, Action)((current_timestep.reverse_params() * occluded_states_distr[timestep]).reverse_params());
+        auto returnval = new Distribution!(State, Action)(sumout!(State)( ((m.T() * current_timestep) * sumout!(Action)(next_timestep ) ) ) );
+//        returnval.normalize();
+        return returnval;
+    }
+
+}
+
+// for occlusion that doesn't change each timestep
+class ExactStaticOccludedTrajectoryToTrajectoryDistr : ExactOccludedTrajectoryToTrajectoryDistr {
+
+    public this(Model m, LinearReward r, Set!State occluded_states, size_t max_trajectory_length, bool extend_terminals_to_equal_length = true) {
+
+        super(m, r, new Set!State[0], extend_terminals_to_equal_length);
+        
+        occluded_states_distr = new Distribution!(State)[max_trajectory_length];
+        auto temp = new Distribution!(State)(m.S(), 0.0);
+        foreach( s ; occluded_states) {
+            temp[s[0]] = 1.0 / occluded_states.size();
+        }
+        occluded_states_distr[] = temp;
+
+    }
+}
+
 // alternative to my implementation using a markov smoother
 class MarkovSmootherExactOccludedTrajectoryToTrajectoryDistr: Sequence_Distribution_Computer!(State, Action) {
 
-    bool extend_terminals_to_equal_length;
-    Model m;
-    LinearReward r;
-    Set!State occluded_states;
+    protected bool extend_terminals_to_equal_length;
+    protected Model m;
+    protected LinearReward r;
+    protected Set!State[] occluded_states;
     
-    public this(Model m, LinearReward r, Set!State occluded_states, bool extend_terminals_to_equal_length = true) {
+    public this(Model m, LinearReward r, Set!State[] occluded_states, bool extend_terminals_to_equal_length = true) {
         this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
         this.m = m;
         this.r = r;
@@ -72,13 +128,7 @@ class MarkovSmootherExactOccludedTrajectoryToTrajectoryDistr: Sequence_Distribut
 
         Sequence!(Distribution!(State, Action))[] returnval = new Sequence!(Distribution!(State, Action))[trajectories.length];
 
-        auto temporary = new Distribution!(State)(m.S(), 0.0);
-        foreach (s; occluded_states) {
-            // only the occluded states could be in the missing timesteps
-            temporary[s] = 1.0 / occluded_states.size();
-        }
-        auto missing_observation = pack_distribution(policy * temporary);
-                    
+        
         foreach (i, traj ; trajectories) {
             
             // build an observation sequence
@@ -90,7 +140,12 @@ class MarkovSmootherExactOccludedTrajectoryToTrajectoryDistr: Sequence_Distribut
 
                 if (timestep[0] is null) {
                     // state is missing
-                    dist = missing_observation;
+                    auto temporary = new Distribution!(State)(m.S(), 0.0);
+                    foreach (s; occluded_states[t]) {
+                        // only the occluded states could be in the missing timesteps
+                        temporary[s] = 1.0 / occluded_states[t].size();
+                    }
+                    dist = pack_distribution(policy * temporary);
                    
                 } else if (timestep[1] is null) {
                     // action is missing
@@ -132,3 +187,16 @@ class MarkovSmootherExactOccludedTrajectoryToTrajectoryDistr: Sequence_Distribut
     }
 
 }
+
+// for occlusion that doesn't change each timestep
+class MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr: MarkovSmootherExactOccludedTrajectoryToTrajectoryDistr {
+
+    public this(Model m, LinearReward r, Set!State occluded_states, size_t max_trajectory_length, bool extend_terminals_to_equal_length = true) {
+
+        Set!State [] oc = new Set!State[max_trajectory_length];
+        oc[] = occluded_states;
+        
+        super(m, r, oc, extend_terminals_to_equal_length);
+    }
+}
+

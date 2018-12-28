@@ -87,9 +87,9 @@ public Sequence!(Distribution!(State, Action))[] traj_to_traj_distr( Sequence!(S
 // Exact version, interates through all possible trajectories using a forward-backword algorithm
 class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(State, Action) {
 
-    bool extend_terminals_to_equal_length;
-    Model m;
-    LinearReward r;
+    protected bool extend_terminals_to_equal_length;
+    protected Model m;
+    protected LinearReward r;
     
     public this(Model m, LinearReward r, bool extend_terminals_to_equal_length = true) {
         this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
@@ -124,9 +124,9 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
                     // state is missing
                     if (t == 0) {
                         // first timestep, use initial state distribution
-                        dist = forward_timestep(policy * m.initialStateDistribution(), policy);
+                        dist = forward_timestep(policy * m.initialStateDistribution(), policy, t);
                     } else {
-                        dist = forward_timestep(seq[t-1][0], policy);
+                        dist = forward_timestep(seq[t-1][0], policy, t);
                     }
                     
                 } else if (timestep[1] is null) {
@@ -170,9 +170,9 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
                         // state is missing
                         auto temp = policy * new Distribution!(State)(m.S(), DistInitType.Uniform);
                         if (t < traj.length - 1) {
-                            dist = reverse_timestep(temp, seq[t+1][0]);
+                            dist = reverse_timestep(temp, seq[t+1][0], t);
                         } else {
-                            dist = temp;
+                            dist = reverse_timestep(temp, new Distribution!(State, Action)(full_space, 1.0), t);
                         }        
                     } else if (timestep[1] is null) {
                         // action is missing
@@ -214,7 +214,7 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
 
     }
     
-    protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy) {
+    protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy, size_t timestep) {
 
         auto returnval = policy * new Distribution!(State)(sumout!(Action)(sumout!(State)( (m.T() * previous_timestep).reverse_params())));
 //        returnval.normalize();        
@@ -222,7 +222,7 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
 
     }
 
-    protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) current_timestep, Distribution!(State, Action) next_timestep) {
+    protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) current_timestep, Distribution!(State, Action) next_timestep, size_t timestep) {
         auto returnval = new Distribution!(State, Action)(sumout!(State)( ((m.T() * current_timestep) * sumout!(Action)(next_timestep ) ) ) );
 //        returnval.normalize();
         return returnval;
@@ -297,6 +297,9 @@ class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: Sequence_Distributi
 
         Sequence!(Distribution!(State, Action))[] returnval = new Sequence!(Distribution!(State, Action))[trajectories.length];
 
+        auto temporary = new Distribution!(State)(m.S(), DistInitType.Uniform);
+        auto missing_observation = pack_distribution(policy * temporary);
+                    
         foreach (i, traj ; trajectories) {
             
             // build an observation sequence
@@ -308,8 +311,8 @@ class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: Sequence_Distributi
 
                 if (timestep[0] is null) {
                     // state is missing
-                    dist = new Distribution!(Tuple!(State, Action))(tuple_full_space, DistInitType.Uniform);
-                    
+                    dist = missing_observation;
+                   
                 } else if (timestep[1] is null) {
                     // action is missing
                     auto temp_state_dist = new Distribution!(State)(m.S(), 0.0);
