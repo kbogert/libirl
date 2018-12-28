@@ -72,7 +72,7 @@ unittest {
         gamma = 0.99;
         value_error = 0.0001;
 
-        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())));
         V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
         optimal_value = 0;
@@ -269,7 +269,7 @@ unittest {
         gamma = 0.99;
         value_error = 0.0001;
 
-        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())));
         V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
         optimal_value = 0;
@@ -338,7 +338,7 @@ unittest {
         gamma = 0.99;
         value_error = 0.0001;
 
-        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())));
         V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
 
         optimal_value = 0;
