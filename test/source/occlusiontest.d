@@ -17,7 +17,6 @@ import std.stdio;
 @name("Deterministic trajectory occlusion simple test")
 unittest {
 
-
     RandomMDPStateSpace states = new RandomMDPStateSpace(3);
     RandomMDPActionSpace actions = new RandomMDPActionSpace(2);
 
@@ -59,7 +58,7 @@ unittest {
         w = 0;
     }
     true_weights[$-1] = 1;
-   
+
     auto reward_obj = new UniqueFeaturesPerStateActionReward(states, actions, true_weights);
 
     auto model = new BasicModel(states, actions, transitions, reward_obj.toFunction(), 0.95, new Distribution!(State)(states, DistInitType.Uniform), 0.1);
@@ -294,7 +293,6 @@ unittest {
 
 //        writeln("traj ", arr[0]);
         auto distr = trajectoryCalc.to_traj_distr(arr, lr.getWeights());
-writeln("rand");        
         auto controlDistr = controlCalc.to_traj_distr(arr, lr.getWeights());
 
         foreach (s; model.S()) {
@@ -304,7 +302,6 @@ writeln("rand");
                 }
             }
         }
-writeln("rand2");        
     }
 
     // chunks of the gridworld occluded
