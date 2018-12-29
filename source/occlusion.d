@@ -67,6 +67,14 @@ class ExactOccludedTrajectoryToTrajectoryDistr : ExactPartialTrajectoryToTraject
         super(m, r, extend_terminals_to_equal_length);
     }
 
+    override protected Distribution!(State, Action) first_timestep(Distribution!(State) initial, ConditionalDistribution!(Action, State) policy, size_t timestep) {
+
+        auto returnval = policy * new Distribution!(State)(initial * occluded_states_distr[timestep]);
+//        returnval.normalize();
+        return returnval;
+
+    }
+
     override protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy, size_t timestep) {
 
         auto returnval = policy * new Distribution!(State)(sumout!(Action)(sumout!(State)( (m.T() * previous_timestep).reverse_params())) * occluded_states_distr[timestep]);
@@ -94,7 +102,12 @@ class ExactStaticOccludedTrajectoryToTrajectoryDistr : ExactOccludedTrajectoryTo
         occluded_states_distr = new Distribution!(State)[max_trajectory_length];
         auto temp = new Distribution!(State)(m.S(), 0.0);
         foreach( s ; occluded_states) {
-            temp[s[0]] = 1.0 / occluded_states.size();
+            try {
+                temp[s[0]] = 1.0 / occluded_states.size();
+            } catch (Exception e) {
+                writeln(s[0], " ", m.S());
+                throw e;
+            }
         }
         occluded_states_distr[] = temp;
 

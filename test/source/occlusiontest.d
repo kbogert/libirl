@@ -5,6 +5,8 @@ import randommdp;
 import discretemdp;
 import discretefunctions;
 import occlusion;
+import maxentIRL;
+import analysis;
 import std.typecons;
 import std.conv;
 import std.random;
@@ -231,12 +233,15 @@ unittest {
     
 }
 
-
 @name("Gridworld MDP occlusion test")
 unittest {
 
-    int sizeX = 10;
-    int sizeY = 10;
+    int sizeX = 6;
+    int sizeY = 6;
+    version(fullunittest) {
+        sizeX = 10;
+        sizeY = 10;
+    }
     double gamma = 0.95;
     double value_error = 0.1;
 
@@ -279,7 +284,6 @@ unittest {
 
     // random occlusion
     foreach (i; 0 .. 10) {
-
         auto occluded_states = randomOccludedStates(model, uniform(cast(int)(0.1 * (sizeX * sizeY)), cast(int)(0.8 * (sizeX * sizeY))));
         
         auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
@@ -322,7 +326,7 @@ unittest {
         auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
         auto controlCalc = new MarkovSmootherExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
 
-        // generate random trajectories with random missing timesteps
+        // generate random trajectories with occluded timesteps
         auto arr = new Sequence!(State, Action)[1];
         arr[0] = simulate(model, model.getPolicy(), uniform(15, 20), model.initialStateDistribution());
 
@@ -341,3 +345,42 @@ unittest {
         }
     }    
 }
+
+
+@name("LME IRL random MDP occlusion test")
+unittest {
+    foreach (iter; 0 .. 50) {
+
+        UniqueFeaturesPerStateActionReward lr;
+        auto model = generateRandomMDP(6, 3, 10, 1, 0.95, lr);
+
+        auto occluded_states = randomOccludedStates(model, uniform(1, 5));
+
+        // generate random trajectories with occluded timesteps
+        auto arr = new Sequence!(State, Action)[10];
+        foreach(j; 0 .. arr.length) {
+            arr[j] = simulate(model, model.getPolicy(), uniform(15, 20), model.initialStateDistribution());
+            arr[j] = removeOccludedTimesteps(arr[0], occluded_states);
+        }
+
+        auto M_step = new MaxCausalEntIRL_InfMDP(model, lr, 0.1, lr.getWeights());
+        auto E_step = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20);
+
+        auto lme_irl = new LME_IRL!(State, Action)(M_step, E_step, 0.1, 100);
+
+        double [] rand_weights = new double[lr.getSize()];
+        foreach(ref w; rand_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        auto found_weights = lme_irl.solve(arr, rand_weights);
+
+        
+        double err = calcInverseLearningError(model, lr, new LinearReward(lr.getAllFeatures(), found_weights), 0.1, 100);
+
+        // make sure the inverse error is low, like less than a state's value
+        auto V = soft_max_value_iteration(model, 0.1 * max ( max( lr.toFunction())) , 100);
+        assert(err >= 0 && err < V[model.S().getOne()], "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(lr.getWeights()));
+
+    }
+}
+

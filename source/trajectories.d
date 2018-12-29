@@ -124,7 +124,7 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
                     // state is missing
                     if (t == 0) {
                         // first timestep, use initial state distribution
-                        dist = forward_timestep(policy * m.initialStateDistribution(), policy, t);
+                        dist = first_timestep(m.initialStateDistribution(), policy, t);
                     } else {
                         dist = forward_timestep(seq[t-1][0], policy, t);
                     }
@@ -200,7 +200,6 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
         }
 
         Sequence!(Distribution!(State, Action))[] returnval = new Sequence!(Distribution!(State, Action))[trajectories.length];
-
         // combine together
         foreach(i, traj ; forward) {
             returnval[i] = new Sequence!(Distribution!(State, Action))(traj.length());
@@ -210,6 +209,14 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
             }
         }
         
+        return returnval;
+
+    }
+
+    protected Distribution!(State, Action) first_timestep(Distribution!(State) initial, ConditionalDistribution!(Action, State) policy, size_t timestep) {
+
+        auto returnval = policy * initial;
+//        returnval.normalize();        
         return returnval;
 
     }
@@ -241,11 +248,10 @@ Sequence!(Distribution!(T)) SequenceMarkovChainSmoother(T)(Sequence!(Distributio
         Distribution!(T) prior;
         
         if (t == 0) {
-            prior = initial_state;
+            forward[t] = tuple(new Distribution!(T)(initial_state * o_t[0]));        
         } else {
-            prior = forward[t-1][0];
+            forward[t] = tuple(new Distribution!(T)(sumout((transitions * forward[t-1][0]).reverse_params()) * o_t[0]));        
         }
-        forward[t] = tuple(new Distribution!(T)(sumout((transitions * prior).reverse_params()) * o_t[0]));        
     }
     // backward step
 

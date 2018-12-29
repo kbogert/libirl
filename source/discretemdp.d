@@ -453,6 +453,10 @@ class LinearReward : Reward {
         return features[tuple(s, a)];
     }
 
+    public Function!(double [], State, Action) getAllFeatures() {
+        return features;
+    }
+
     public override double opIndex(State s, Action a) {
         return dotProduct(weights, getFeatures(s, a));
     }
