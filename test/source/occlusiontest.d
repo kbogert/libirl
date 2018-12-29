@@ -353,6 +353,7 @@ unittest {
 
         UniqueFeaturesPerStateActionReward lr;
         auto model = generateRandomMDP(6, 3, 10, 1, 0.95, lr);
+        model = new SoftMaxModel(model.S(), model.A(), model.T(), model.R(), model.gamma(), model.initialStateDistribution(), model.getValueIterationTolerance());
         auto true_weights = lr.getWeights();
         
         auto occluded_states = randomOccludedStates(model, uniform(1, 5));
