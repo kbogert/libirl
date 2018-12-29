@@ -353,7 +353,8 @@ unittest {
 
         UniqueFeaturesPerStateActionReward lr;
         auto model = generateRandomMDP(6, 3, 10, 1, 0.95, lr);
-
+        auto true_weights = lr.getWeights();
+        
         auto occluded_states = randomOccludedStates(model, uniform(1, 5));
 
         // generate random trajectories with occluded timesteps
@@ -375,12 +376,15 @@ unittest {
         auto found_weights = lme_irl.solve(arr, rand_weights);
 
         
-        double err = calcInverseLearningError(model, lr, new LinearReward(lr.getAllFeatures(), found_weights), 0.1, 100);
+        double err = calcInverseLearningError(model, new LinearReward(lr.getAllFeatures(), true_weights), new LinearReward(lr.getAllFeatures(), found_weights), 0.1, 100);
 
         // make sure the inverse error is low, like less than a state's value
         auto V = soft_max_value_iteration(model, 0.1 * max ( max( lr.toFunction())) , 100);
         assert(err >= 0 && err < V[model.S().getOne()], "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(lr.getWeights()));
 
+/*        This is a stupid way of testing IRL, do it right,
+        check ILE against itself with more data
+        check that the found reward approaches the real one with more data*/
     }
 }
 
