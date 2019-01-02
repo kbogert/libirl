@@ -83,12 +83,15 @@ public Function!(double, State) value_iteration(Model m, double tolerance, Funct
     double diff = abs(max( v_prev ));
     int iter = 0;
 
-    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter && isFinite(diff)) {
        
         v_next = max( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
-        diff = max ( v_next - v_prev ); 
+        diff = max ( v_next - v_prev );
+        
         v_prev = v_next;
+        iter ++;
+
     }
     return v_next;
 }
@@ -587,14 +590,17 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
     auto T = m.T().flatten();
     
     double diff = abs(max( v_prev ));
+    
     int iter = 0;
 
-    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter && isFinite(diff)) {
         
         v_next = softmax( m.R() + m.gamma() * sumout!(State)( T * v_prev ) ) ;
 
         diff = abs(max ( v_next - v_prev )); 
+        
         v_prev = v_next;
+        iter++;
     }
 
     return v_next;
@@ -662,6 +668,7 @@ Function!(double, State) value_function_under_policy(Model m, Function!(Tuple!(A
         diff = abs(max ( v_next - v_prev )); 
 
         v_prev = v_next;
+        iter ++;
     }
 
     return v_next;
