@@ -1664,3 +1664,112 @@ Distribution!(PARAM) unpack_distribution(PARAM...)(Distribution!(Tuple!(PARAM)) 
 
     return returnval;
 }
+
+// Specialized Distribution where each probability is proportional to e^param
+class ExponentialDistribution(PARAMS...) {
+
+    double [Tuple!PARAMS] params;
+    double normalizer;
+    
+    public this(Distribution!(PARAMS) initial) {
+
+        normalizer = 0.0;
+
+        foreach(p ; initial.param_set()) {
+
+            double val = log(initial[p[0]]);
+
+            params[p] = val;
+            normalizer += exp(val);
+        }
+        
+    }
+
+    double opIndex(Tuple!(PARAMS) i ) {
+        double* p;
+        p = (i in params);
+        if (p !is null) {
+            return exp(*p) / normalizer;
+        }
+/*        if ( mySet !is null && ! mySet.contains(i)) {
+            throw new Exception("ERROR, key is not in the set this function is defined over.");
+        }*/
+        return 0.0;
+    }
+
+    void setParam(Tuple!(PARAMS) i, double newval) {
+        double* p;
+        p = (i in params);
+        if (p !is null) {
+            normalizer -= exp(*p);
+        }
+        params[i] = newval;
+        normalizer += exp(newval);
+    }
+
+    double getParam(Tuple!(PARAMS) i) {
+        double* p;
+        p = (i in params);
+        if (p !is null) {
+            return *p;
+        }
+        return 0.0;
+    }
+
+     public Tuple!(PARAMS) sample() {
+
+        if (params.length == 0) {
+            throw new Exception("Cannot sample from zero sized distribution.");
+        }
+          
+        import std.random;
+
+        auto rand = uniform(0.0, 1.0);
+
+        auto mass = 0.0;
+        foreach ( key, val; params) {
+            mass += exp(val) / normalizer;
+
+            if (mass >= rand)
+                return key;
+        }
+
+/*        debug {
+            import std.conv;
+            throw new Exception("Didn't find a key to sample, ended at: " ~ to!string(mass) ~ " but wanted " ~ to!string(rand) ~ " " ~ to!string(params) ~ " " ~ to!string(normalizer));
+        } else {*/
+        Tuple!PARAMS returnval;
+        foreach ( key, val; params) {
+            returnval = key;
+        }
+     //   }
+        return returnval;
+    }
+
+    override string toString() {
+
+        string returnval = "";
+
+        foreach (key, val ; params) {
+
+            foreach (k ; key) {
+                static if (isTuple!(typeof(k))) {
+                    returnval ~= "(";
+                    foreach(k2 ; k) {
+                        returnval ~= to!string(k2) ~ ", ";
+                    }
+                    returnval ~= ") ";
+                } else {
+                    returnval ~= to!string(k) ~ ", ";
+                }
+            }
+            
+            returnval ~= " => " ~ to!string(exp(val) / normalizer) ~ ", ";
+            
+        }
+        
+        return returnval;
+    }
+            
+}
+
