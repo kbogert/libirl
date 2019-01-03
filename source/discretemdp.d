@@ -79,6 +79,7 @@ public Function!(double, State) value_iteration(Model m, double tolerance, Funct
     Function!(double, State) v_prev = V_prior;
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
+    tolerance = abs(tolerance);
     
     double diff = abs(max( v_prev ));
     int iter = 0;
@@ -588,6 +589,7 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
     Function!(double, State) v_prev = prior_v;
     Function!(double, State) v_next = v_prev; 
     auto T = m.T().flatten();
+    tolerance = abs(tolerance);
     
     double diff = abs(max( v_prev ));
     
