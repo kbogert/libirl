@@ -12,6 +12,8 @@ import std.conv;
 import std.random;
 import std.math;
 import gridworld;
+import trajectories;
 
 import std.stdio;
+
 

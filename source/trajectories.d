@@ -3,6 +3,7 @@ module trajectories;
 import discretefunctions;
 import discretemdp;
 import std.typecons;
+import partialobservation;
 
 
 
@@ -359,3 +360,357 @@ class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: Sequence_Distributi
     }
 
 }
+
+
+// Takes partially observed trajectories and converts them to trajectory distributions
+// Exact version, interates through all possible trajectories using a forward-backword algorithm
+class ExactPartiallyObservedTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(State, Action, Observation) {
+
+    protected bool extend_terminals_to_equal_length;
+    protected Model m;
+    protected LinearReward r;
+    protected ConditionalDistribution!(Observation, State, Action) observation_model;
+    protected Set!Observation observation_space;
+    
+    public this(Model m, LinearReward r, ConditionalDistribution!(Observation, State, Action) observation_model, Set!Observation observation_space, bool extend_terminals_to_equal_length = true) {
+        this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
+        this.m = m;
+        this.r = r;
+        this.observation_model = observation_model;
+        this.observation_space = observation_space;
+    }
+
+    public Sequence!(Distribution!(State, Action, Observation))[] to_traj_distr( Sequence!(State, Action, Observation)[] trajectories, double [] weights ) {
+
+        r.setWeights(weights);
+        m.setR(r.toFunction());
+        
+        auto policy = m.getPolicy();
+
+        auto full_space = m.S().cartesian_product(m.A()).cartesian_product(observation_space);        
+        auto tuple_full_space = pack_set(full_space);
+        auto stateaction_space = m.S().cartesian_product(m.A());
+        auto tuple_stateaction_space = pack_set(stateaction_space);
+
+        
+        Sequence!(Distribution!(State, Action)) [] observation_array = new Sequence!(Distribution!(State, Action)) [trajectories.length]; 
+        foreach (i, traj ; trajectories) {
+            
+            // build an observation sequence
+
+             Sequence!(Distribution!(State, Action)) observations = new Sequence!(Distribution!(State, Action))(traj.length);
+             Distribution!(State, Action) just_transitions;
+             foreach( t, timestep; traj) {
+
+
+                // build Pr(S, A) each timestep
+                if (t == 0) {
+                    just_transitions = policy * m.initialStateDistribution();
+                } else {
+                    just_transitions = policy * new Distribution!(State)(sumout!Action(sumout!State((m.T() * just_transitions).reverse_params())));
+                }
+
+                // multiply Pr( O | S, A) by Pr(S, A) to get Pr(S, A, O)
+
+                Distribution!(State, Action, Observation) obs_prob = observation_model * just_transitions;
+                
+                // build Pr(S, A; O) by using the specific observation at this timestep                 
+                Distribution!(State, Action) dist = new Distribution!(State, Action)(stateaction_space, 0.0);
+
+                foreach( sa; stateaction_space) {
+                    dist[sa[0], sa[1]] = obs_prob[ sa[0], sa[1], timestep[2] ];
+                }
+
+                dist.normalize();
+                observations[t] = tuple(dist);
+             }
+
+            observation_array[i] = observations;
+        }
+
+        
+        Sequence!(Distribution!(State, Action))[] forward = new Sequence!(Distribution!(State, Action))[trajectories.length];
+
+        size_t max_traj_length = 0;
+        foreach (t ; trajectories)
+            if (t.length() > max_traj_length)
+                max_traj_length = t.length();
+
+        // forward step
+        foreach(i, traj ; trajectories) {
+
+            Sequence!(Distribution!(State, Action)) seq = new Sequence!(Distribution!(State, Action))(traj.length());
+            foreach(t, timestep ; traj) {
+                Distribution!(State, Action) dist;
+
+                if (t == 0) {
+                    // first timestep, use initial state distribution
+                    dist = first_timestep(m.initialStateDistribution(), policy, observation_array[i][t][0], t);
+                } else {
+                    dist = forward_timestep(seq[t-1][0], policy, observation_array[i][t][0], t);
+                }
+
+                seq[t] = tuple(dist);
+            }
+
+            if (traj[$][0] ! is null && traj[$][0].isTerminal() && extend_terminals_to_equal_length ) {
+
+                while( seq.length() < max_traj_length) {
+                    seq ~= seq[$];
+                }
+            }
+            
+            forward[i] = seq;
+        }
+        
+        Sequence!(Distribution!(State, Action))[] reverse = new Sequence!(Distribution!(State, Action))[trajectories.length];
+        // reverse step
+        foreach(i, traj ; trajectories) {
+            Sequence!(Distribution!(State, Action)) seq = new Sequence!(Distribution!(State, Action))(traj.length());
+            seq[$] = tuple(new Distribution!(State, Action)(stateaction_space, 1.0));
+            
+            foreach_reverse(t, timestep ; traj) {
+
+                if (trajectories[i].length > t) {
+
+                    Distribution!(State, Action,) dist;
+
+                    if (t < traj.length - 1) {
+                        dist = reverse_timestep(observation_array[i][t][0], seq[t+1][0], t);
+                    } else {
+                        dist = reverse_timestep(observation_array[i][t][0], new Distribution!(State, Action)(stateaction_space, 1.0), t);
+                    }        
+
+                    seq[t] = tuple(dist);
+                }
+                if (traj[$][0] ! is null && traj[$][0].isTerminal() && extend_terminals_to_equal_length ) {
+
+                    while( seq.length() < max_traj_length) {
+                        seq ~= seq[$];
+                    }
+                }
+            }
+            reverse[i] = seq;            
+            
+        }
+
+        Sequence!(Distribution!(State, Action))[] combined = new Sequence!(Distribution!(State, Action))[trajectories.length];
+        // combine together
+        foreach(i, traj ; forward) {
+            combined[i] = new Sequence!(Distribution!(State, Action))(traj.length());
+            foreach( t, timestep; traj) {
+                combined[i][t] = tuple(new Distribution!(State, Action)(timestep[0] * reverse[i][t][0]));
+                combined[i][t][0].normalize();
+            }
+        }
+
+        Sequence!(Distribution!(State, Action, Observation))[] returnval = new Sequence!(Distribution!(State, Action, Observation))[trajectories.length];
+
+        foreach(i, temp_sequence; combined) {
+
+            Sequence!(Distribution!(State, Action, Observation)) results = new Sequence!(Distribution!(State, Action, Observation))(temp_sequence.length);
+            // convert results from Pr(S, A) => Pr(S, A, o)
+            foreach (t, timestep; temp_sequence) {
+
+                double[Tuple!(State, Action, Observation)] temp_array;
+                foreach(sa; stateaction_space) {
+                    temp_array[tuple(sa[0], sa[1], trajectories[i][t][2])] = timestep[0][sa[0], sa[1]];
+                }
+                Distribution!(State, Action, Observation) temp_distribution = new Distribution!(State, Action, Observation)(full_space, temp_array);
+                results[t] = tuple(temp_distribution);
+            }
+            returnval[i] = results;
+        }
+                
+        return returnval;
+
+    }
+
+    protected Distribution!(State, Action) first_timestep(Distribution!(State) initial, ConditionalDistribution!(Action, State) policy, Distribution!(State, Action) observation, size_t timestep) {
+
+        auto returnval = new Distribution!(State, Action)(observation * (policy * initial));
+//        returnval.normalize();        
+        return returnval;
+
+    }
+    
+    protected Distribution!(State, Action) forward_timestep(Distribution!(State, Action) previous_timestep, ConditionalDistribution!(Action, State) policy, Distribution!(State, Action) observation,  size_t timestep) {
+
+        auto returnval = new Distribution!(State, Action)(observation * (policy * new Distribution!(State)(sumout!(Action)(sumout!(State)( (m.T() * previous_timestep).reverse_params())))));
+//        returnval.normalize();        
+        return returnval;
+
+    }
+
+    protected Distribution!(State, Action) reverse_timestep(Distribution!(State, Action) observation, Distribution!(State, Action) next_timestep, size_t timestep) {
+        auto returnval = new Distribution!(State, Action)(sumout!(State)( ((m.T() * observation) * sumout!(Action)(next_timestep ) ) ) );
+//        returnval.normalize();
+        return returnval;
+    }
+}
+
+
+// alternative to my implementation using a markov smoother
+class MarkovSmootherExactPartiallyObservedTrajectoryToTrajectoryDistr: Sequence_Distribution_Computer!(State, Action, Observation) {
+
+    bool extend_terminals_to_equal_length;
+    Model m;
+    LinearReward r;
+    ConditionalDistribution!(Observation, State, Action) observation_model;
+    Set!Observation observation_space;
+    
+    public this(Model m, LinearReward r, ConditionalDistribution!(Observation, State, Action) observation_model, Set!Observation observation_space, bool extend_terminals_to_equal_length = true) {
+        this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
+        this.m = m;
+        this.r = r;
+        this.observation_model = observation_model;
+        this.observation_space = observation_space;
+    }
+
+    public Sequence!(Distribution!(State, Action, Observation))[] to_traj_distr( Sequence!(State, Action, Observation)[] trajectories, double [] weights ) {
+
+        r.setWeights(weights);
+        m.setR(r.toFunction());
+        
+        auto policy = m.getPolicy();
+
+        auto full_space = m.S().cartesian_product(m.A()).cartesian_product(observation_space);        
+        auto tuple_full_space = pack_set(full_space);
+        auto stateaction_space = m.S().cartesian_product(m.A());
+        auto tuple_stateaction_space = pack_set(stateaction_space);
+        
+        Sequence!(Distribution!(State, Action, Observation))[] returnval = new Sequence!(Distribution!(State, Action, Observation))[trajectories.length];
+
+        foreach (i, traj ; trajectories) {
+            
+            // build an observation sequence
+
+             Sequence!(Distribution!(Tuple!(State, Action))) observations = new Sequence!(Distribution!(Tuple!(State, Action)))(traj.length);
+             Distribution!(State, Action) just_transitions;
+             foreach( t, timestep; traj) {
+
+
+                // build Pr(S, A) each timestep
+                if (t == 0) {
+                    just_transitions = policy * m.initialStateDistribution();
+                } else {
+                    just_transitions = policy * new Distribution!(State)(sumout!Action(sumout!State((m.T() * just_transitions).reverse_params())));
+                }
+
+                // multiply Pr( O | S, A) by Pr(S, A) to get Pr(S, A, O)
+
+                Distribution!(State, Action, Observation) obs_prob = observation_model * just_transitions;
+                
+                // build Pr(S, A; O) by using the specific observation at this timestep                 
+                Distribution!(Tuple!(State, Action)) dist = new Distribution!(Tuple!(State, Action))(tuple_stateaction_space, 0.0);
+
+                foreach( sa; tuple_stateaction_space) {
+                    dist[sa[0]] = obs_prob[ sa[0][0], sa[0][1], timestep[2] ];
+                }
+
+                dist.normalize();
+                observations[t] = tuple(dist);
+             }
+
+             
+            // build a transition function
+            
+            auto transitions = new ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action))(tuple_stateaction_space, tuple_stateaction_space);
+            foreach (sa ; stateaction_space) {
+                transitions[sa] = pack_distribution( policy * m.T()[sa] );
+                
+            }
+
+            Distribution!(Tuple!(State, Action)) initial_state = pack_distribution(policy * m.initialStateDistribution());
+            
+            auto temp_sequence = SequenceMarkovChainSmoother!(Tuple!(State, Action))(observations, transitions, initial_state);
+            auto results = new Sequence!(Distribution!(State, Action, Observation))(temp_sequence.length);
+
+            // convert results from Pr(S, A) => Pr(S, A, o)
+            foreach (t, timestep; temp_sequence) {
+
+                double[Tuple!(State, Action, Observation)] temp_array;
+                foreach(sa; stateaction_space) {
+                    temp_array[tuple(sa[0], sa[1], traj[t][2])] = timestep[0][sa];
+                }
+                Distribution!(State, Action, Observation) temp_distribution = new Distribution!(State, Action, Observation)(full_space, temp_array);
+                results[t] = tuple(temp_distribution);
+            }
+            returnval[i] = results;
+        }
+
+        return returnval;                
+    }
+
+}
+
+
+Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, size_t burn_in_samples, size_t total_samples) {
+
+    double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
+
+    Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
+    foreach(t ; 0 .. observations.length) {
+        returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
+
+    }    
+    
+    Sequence!(T) currentState = new Sequence!(T)(observations.length);
+
+    // create initial state
+
+    foreach(t; 0 .. observations.length) {
+
+        if (t == 0) {
+            currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
+            
+        } else {
+            currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
+
+        }
+    }
+    
+
+    foreach(i; 0 .. (burn_in_samples + total_samples)) {
+
+        auto position = i % observations.length;
+
+        Function!(Tuple!T, T) chooser;
+        if (position != observations.length - 1) {
+
+            Tuple!(T) [Tuple!(T)] chooser_arr;
+            
+            foreach( t; observations[position][0].param_set()) {
+                chooser_arr[t] = currentState[position + 1];
+            }
+            
+            chooser = new Function!(Tuple!T, T)(observations[position][0].param_set(), chooser_arr);
+        }
+
+
+        
+        Tuple!T newSample;
+        if (position == 0) {
+            newSample = new Distribution!(T)(((transitions * (initial_state * observations[position][0])).reverse_params()).apply(chooser)).sample();
+        } else if (position == observations.length - 1) {
+            newSample = new Distribution!(T)(sumout((transitions * (transitions[currentState[position-1]] * observations[position][0])).reverse_params())).sample();
+        } else {
+            newSample = new Distribution!(T)(((transitions * (transitions[currentState[position-1]] * observations[position][0])).reverse_params()).apply(chooser)).sample();
+        }
+
+        if (i > burn_in_samples) {
+
+            returnval[position][0][newSample] += 0.01;
+            
+        }
+        currentState[position] = newSample;
+    }
+
+    foreach(entry; returnval) {
+        entry[0].normalize();
+    }    
+
+
+    return returnval;
+}
+
