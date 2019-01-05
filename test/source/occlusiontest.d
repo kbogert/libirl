@@ -239,8 +239,8 @@ unittest {
     int sizeX = 6;
     int sizeY = 6;
     version(fullunittest) {
-        sizeX = 10;
-        sizeY = 10;
+        sizeX = 8;
+        sizeY = 8;
     }
     double gamma = 0.95;
     double value_error = 0.1;
