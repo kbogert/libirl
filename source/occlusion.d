@@ -3,6 +3,7 @@ module occlusion;
 import discretemdp;
 import discretefunctions;
 import trajectories;
+import solvers;
 import std.typecons;
 import std.algorithm.comparison;
 import std.random;

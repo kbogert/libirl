@@ -26,11 +26,13 @@ shared static this()
             import randommdptest;
             import trajectorytest;
             import occlusiontest;
-                        
+            import solvers;
+            
     //		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
 
             bool allSuccessful = true;
         
+    		allSuccessful &= runUnitTests!(solverstest)(new ConsoleTestResultWriter);
     		allSuccessful &= runUnitTests!(occlusiontest)(new ConsoleTestResultWriter);
     		allSuccessful &= runUnitTests!(trajectorytest)(new ConsoleTestResultWriter);
     		allSuccessful &= runUnitTests!(randommdptest)(new ConsoleTestResultWriter);
