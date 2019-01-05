@@ -26,7 +26,7 @@ shared static this()
             import randommdptest;
             import trajectorytest;
             import occlusiontest;
-            import solvers;
+            import solverstest;
             
     //		runUnitTests!(gridworld)(new JsonTestResultWriter("results.json"));
 
