@@ -85,6 +85,10 @@ public Sequence!(Distribution!(State, Action))[] traj_to_traj_distr( Sequence!(S
     
 }
 
+// ******************************************************************************
+// Trajectories with missing entries (random data loss)
+// ******************************************************************************
+
 
 // Takes partial trajectories and converts them to trajectory distributions
 // Exact version, interates through all possible trajectories using a forward-backword algorithm
@@ -240,17 +244,19 @@ class ExactPartialTrajectoryToTrajectoryDistr : Sequence_Distribution_Computer!(
 }
 
 
-// alternative to my implementation using a markov smoother
-class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Computer!(State, Action) {
+// base class for alternatives to my implementations using MCMC solvers  
+abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Computer!(State, Action) {
 
-    bool extend_terminals_to_equal_length;
-    Model m;
-    LinearReward r;
-    
-    public this(Model m, LinearReward r, bool extend_terminals_to_equal_length = true) {
+    protected bool extend_terminals_to_equal_length;
+    protected Model m;
+    protected LinearReward r;
+    protected size_t repeats;
+        
+    public this(Model m, LinearReward r, size_t repeats, bool extend_terminals_to_equal_length = true) {
         this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
         this.m = m;
         this.r = r;
+        this.repeats = repeats;
     }
 
     public Sequence!(Distribution!(State, Action))[] to_traj_distr( Sequence!(State, Action)[] trajectories, double [] weights ) {
@@ -307,21 +313,134 @@ class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: Sequence_Distributi
             }
 
             Distribution!(Tuple!(State, Action)) initial_state = pack_distribution(policy * m.initialStateDistribution());
-            
-            auto temp_sequence = SequenceMarkovChainSmoother!(Tuple!(State, Action))(observations, transitions, initial_state);
-            auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
 
-            foreach (t, timestep; temp_sequence) {
-                results[t] = tuple(unpack_distribution(timestep[0]));
+            Sequence!(Function!(double, State, Action)) sum_results = new Sequence!(Function!(double, State, Action))(observations.length);
+            foreach(ref timestep; sum_results) {
+                timestep = tuple(new Function!(double, State, Action)(full_space, 0.0));
             }
-            returnval[i] = results;
+            
+           foreach(repeat; 0 .. repeats) {
+                
+                auto results = call_solver(observations, transitions, initial_state, i);
+
+                foreach(t, ref timestep; sum_results) {
+                    timestep = tuple(timestep[0] + results[t][0]);
+                }
+
+            }
+            
+            Sequence!(Distribution!(State, Action)) avg_results = new Sequence!(Distribution!(State, Action))(observations.length);                    
+            foreach(t, timestep; sum_results) {
+                avg_results[t] = tuple(new Distribution!(State, Action)(timestep[0]));
+                avg_results[t][0].normalize();
+            }
+
+            returnval[i] = avg_results;
+            
         }
 
         return returnval;                
     }
 
+    protected abstract Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num);
 }
 
+
+// alternative to my implementation using a markov smoother
+class MarkovSmootherExactPartialTrajectoryToTrajectoryDistr: MCMCPartialTrajectoryToTrajectoryDistr {
+    
+    public this(Model m, LinearReward r, bool extend_terminals_to_equal_length = true) {
+        super(m, r, 1, extend_terminals_to_equal_length);
+    }
+
+    protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
+
+        auto temp_sequence = SequenceMarkovChainSmoother!(Tuple!(State, Action))(observations, transitions, initial_state);
+        auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
+
+        foreach (t, timestep; temp_sequence) {
+            results[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return results;        
+
+    }
+}
+
+class GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajectoryToTrajectoryDistr {
+
+    protected size_t burn_in_samples;
+    protected size_t num_samples;
+        
+    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, bool extend_terminals_to_equal_length = true) {
+        super(m, r, repeats, extend_terminals_to_equal_length);
+
+        this.burn_in_samples = burn_in_samples;
+        this.num_samples = num_samples;
+    }
+
+    protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
+
+        auto temp_sequence = MarkovGibbsSampler!(Tuple!(State, Action))(observations, transitions, initial_state, burn_in_samples, num_samples);
+        auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
+
+        foreach (t, timestep; temp_sequence) {
+            results[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return results;        
+
+    }
+}
+
+
+class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajectoryToTrajectoryDistr {
+
+    protected size_t burn_in_samples;
+    protected size_t num_samples;
+    protected Sequence!(Distribution!(Tuple!(State, Action)))[] proposalDistributions;
+    protected bool use_adaptive;
+            
+    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, bool useAdaptiveProposalDistribution = true, bool extend_terminals_to_equal_length = true) {
+        super(m, r, repeats, extend_terminals_to_equal_length);
+
+        this.burn_in_samples = burn_in_samples;
+        this.num_samples = num_samples;
+        this.use_adaptive = useAdaptiveProposalDistribution;
+
+        this.proposalDistributions = new Sequence!(Distribution!(Tuple!(State, Action)))[proposalDistributions.length];
+        foreach(i; 0 .. proposalDistributions.length) {
+            this.proposalDistributions[i] = new Sequence!(Distribution!(Tuple!(State, Action)))(proposalDistributions[i].length);
+            foreach(t, timestep; proposalDistributions[i]) {
+                this.proposalDistributions[i][t] = tuple(pack_distribution(timestep[0]));
+            }
+        }
+    }
+
+    protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
+
+        Sequence!(Distribution!(Tuple!(State, Action))) temp_sequence;
+
+        if (use_adaptive) {
+            temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+        } else {
+            temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+        }
+        
+        auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
+
+        foreach (t, timestep; temp_sequence) {
+            results[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return results;        
+
+    }
+}
+
+// ******************************************************************************
+// Partially observed trajectories
+// ******************************************************************************
 
 // Takes partially observed trajectories and converts them to trajectory distributions
 // Exact version, interates through all possible trajectories using a forward-backword algorithm
