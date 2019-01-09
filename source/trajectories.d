@@ -394,19 +394,26 @@ class GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTra
 }
 
 
+enum HybridMCMCMode {
+
+    Fixed,
+    Adaptive,
+    AdaptiveImportanceSampling
+}
+
 class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajectoryToTrajectoryDistr {
 
     protected size_t burn_in_samples;
     protected size_t num_samples;
     protected Sequence!(Distribution!(Tuple!(State, Action)))[] proposalDistributions;
-    protected bool use_adaptive;
+    protected HybridMCMCMode mode;
             
-    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, bool useAdaptiveProposalDistribution = true, bool extend_terminals_to_equal_length = true) {
+    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, HybridMCMCMode mode = HybridMCMCMode.AdaptiveImportanceSampling, bool extend_terminals_to_equal_length = true) {
         super(m, r, repeats, extend_terminals_to_equal_length);
 
         this.burn_in_samples = burn_in_samples;
         this.num_samples = num_samples;
-        this.use_adaptive = useAdaptiveProposalDistribution;
+        this.mode = mode;
 
         this.proposalDistributions = new Sequence!(Distribution!(Tuple!(State, Action)))[proposalDistributions.length];
         foreach(i; 0 .. proposalDistributions.length) {
@@ -421,10 +428,19 @@ class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajec
 
         Sequence!(Distribution!(Tuple!(State, Action))) temp_sequence;
 
-        if (use_adaptive) {
-            temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
-        } else {
-            temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+        switch (mode) {
+
+            case HybridMCMCMode.Fixed:
+                temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                break;
+            case HybridMCMCMode.Adaptive:
+                temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                break;
+            case HybridMCMCMode.AdaptiveImportanceSampling:
+                temp_sequence = AdaptiveHybridMCMCIS!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                break;
+            default:
+                throw new Exception("Invalid Mode");
         }
         
         auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);

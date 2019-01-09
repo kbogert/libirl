@@ -420,7 +420,6 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMC(T)(Sequence!(Distribution!(T)) ob
 
         if (uniform01() <= acc) {
             currentState[position] = newSample;
-            proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) + ((3.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
         } else {
             proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((100.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
         }
@@ -511,7 +510,9 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
         }
         proposalProb /= proposal_distributions[position][0][currentState[position]];
 
-        currentState[position] = newSample;
+        // Guard against zero probability samples
+        if (newSampleProb > 0.0) 
+            currentState[position] = newSample;
 
 
         // why does this algorithm work better with this update here instead of at the end of the loop?          
@@ -534,7 +535,7 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
         proposalProb *= proposal_distributions[position][0][currentState[position]];
 
             
-        if (i > burn_in_samples) {
+        if (i > burn_in_samples && newSampleProb > 0) {
 
             returnval[position][0][currentState[position]] += trajProb / proposalProb;
         }
