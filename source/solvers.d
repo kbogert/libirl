@@ -439,3 +439,110 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMC(T)(Sequence!(Distribution!(T)) ob
 
     return returnval;
 }
+
+
+
+
+Sequence!(Distribution!(T)) HybridMCMCIS(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) proposal_distributions, size_t burn_in_samples, size_t total_samples) {
+
+    double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
+
+    Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
+    foreach(t ; 0 .. observations.length) {
+        returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
+
+    }    
+    double trajProb = 1.0;
+    double proposalProb = 1.0;
+    
+    
+    Sequence!(T) currentState = new Sequence!(T)(observations.length);
+
+    // create initial state
+
+    foreach(t; 0 .. observations.length) {
+
+        if (t == 0) {
+            auto sampleDist = new Distribution!(T)((initial_state * observations[t][0]));
+            currentState[t] = sampleDist.sample();
+            trajProb *= sampleDist[currentState[t]];
+            
+        } else {
+            auto sampleDist = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0]));
+            currentState[t] = sampleDist.sample();
+            trajProb *= sampleDist[currentState[t]];
+
+        }
+        proposalProb *= proposal_distributions[t][0][currentState[t]];
+    }
+    
+
+    foreach(i; 0 .. (burn_in_samples + total_samples)) {
+
+        auto position = i % observations.length;
+
+        Tuple!T newSample;
+
+        newSample = proposal_distributions[position][0].sample();
+
+        double newSampleProb;
+        double oldSampleProb;
+        
+        if (position == 0) {
+            newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
+            oldSampleProb = ((initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
+        } else if (position == observations.length - 1) {
+            newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
+            oldSampleProb = (( observations[position][0][currentState[position]] * transitions[currentState[position-1]][currentState[position]]) / proposal_distributions[position][0][currentState[position]]);
+        } else {
+            newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
+            oldSampleProb = (( transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
+        }
+
+        if (position == 0) {
+            auto sampleDist = new Distribution!(T)((initial_state * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
+            trajProb /= sampleDist[currentState[position]];
+        } else if (position == observations.length - 1) {
+            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0]));
+            trajProb /= sampleDist[currentState[position]];
+        } else {
+            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
+            trajProb /= sampleDist[currentState[position]];
+        }
+        proposalProb /= proposal_distributions[position][0][currentState[position]];
+                        
+//        double acc = (fmin(1, newSampleProb / oldSampleProb ));
+
+ //       if (uniform01() <= acc) {
+            currentState[position] = newSample;
+ //       } 
+
+
+        if (position == 0) {
+            auto sampleDist = new Distribution!(T)((initial_state * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
+            trajProb *= sampleDist[currentState[position]];
+        } else if (position == observations.length - 1) {
+            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0]));
+            trajProb *= sampleDist[currentState[position]];
+        } else {
+            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
+            trajProb *= sampleDist[currentState[position]];
+        }
+        proposalProb *= proposal_distributions[position][0][currentState[position]];
+
+            
+        if (i > burn_in_samples) {
+
+            returnval[position][0][currentState[position]] += trajProb / proposalProb;
+        }
+
+    }
+
+    foreach(entry; returnval) {
+        entry[0].normalize();
+    }    
+
+
+    return returnval;
+}
+
