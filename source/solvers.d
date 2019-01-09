@@ -465,6 +465,8 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
     // create initial state
 
     do {
+        trajProb = 1.0;
+        proposalProb = 1.0;
         foreach(t; 0 .. observations.length) {
 
             if (t == 0) {
