@@ -464,21 +464,25 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
 
     // create initial state
 
-    foreach(t; 0 .. observations.length) {
+    do {
+        foreach(t; 0 .. observations.length) {
 
-        if (t == 0) {
-            auto sampleDist = new Distribution!(T)((initial_state * observations[t][0]));
-            currentState[t] = sampleDist.sample();
-            trajProb *= sampleDist[currentState[t]];
+            if (t == 0) {
+                auto sampleDist = new Distribution!(T)((initial_state * observations[t][0]));
+                currentState[t] = sampleDist.sample();
+                trajProb *= sampleDist[currentState[t]];
             
-        } else {
-            auto sampleDist = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0]));
-            currentState[t] = sampleDist.sample();
-            trajProb *= sampleDist[currentState[t]];
+            } else {
+                auto sampleDist = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0]));
+                currentState[t] = sampleDist.sample();
+                trajProb *= sampleDist[currentState[t]];
 
+            }
+            if (trajProb == 0.0)
+                break;
+            proposalProb *= proposal_distributions[t][0][currentState[t]];
         }
-        proposalProb *= proposal_distributions[t][0][currentState[t]];
-    }
+    } while (trajProb != 0.0);
     
 
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
