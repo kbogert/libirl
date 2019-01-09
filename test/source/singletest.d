@@ -7,13 +7,17 @@ import discretefunctions;
 import occlusion;
 import maxentIRL;
 import analysis;
+import gridworld;
+import trajectories;
+import solvers;
+import featureexpections;
+import partialobservation;
+
+import std.stdio;
 import std.typecons;
 import std.conv;
 import std.random;
 import std.math;
-import gridworld;
-import trajectories;
 
-import std.stdio;
 
 
