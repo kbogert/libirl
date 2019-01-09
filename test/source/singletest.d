@@ -10,7 +10,7 @@ import analysis;
 import gridworld;
 import trajectories;
 import solvers;
-import featureexpections;
+import featureexpectations;
 import partialobservation;
 
 import std.stdio;
