@@ -451,7 +451,7 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMC(T)(Sequence!(Distribution!(T)) ob
 
 
 
-Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) initial_proposal_distributions, size_t burn_in_samples, size_t total_samples, bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
+Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) initial_proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
 
     Sequence!(ExponentialDistribution!(T)) proposal_distributions = new Sequence!(ExponentialDistribution!(T))(observations.length);
     foreach(t ; 0 .. observations.length) {
@@ -538,14 +538,11 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
         }
 
         if (position == 0) {
-            auto sampleDist = new Distribution!(T)((initial_state * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
-            trajProb *= sampleDist[currentState[position]];
+            trajProb *= initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]];
         } else if (position == observations.length - 1) {
-            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0]));
-            trajProb *= sampleDist[currentState[position]];
+            trajProb *= transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]];
         } else {
-            auto sampleDist = new Distribution!(T)((transitions[currentState[position-1]] * observations[position][0] * transitions[currentState[position]][currentState[position+1]]));
-            trajProb *= sampleDist[currentState[position]];
+            trajProb *= transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]];
         }
         proposalProb *= proposal_distributions[position][0][currentState[position]];
 
