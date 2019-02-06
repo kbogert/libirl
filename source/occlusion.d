@@ -123,6 +123,9 @@ abstract class MCMCOccludedTrajectoryToTrajectoryDistr: Sequence_Distribution_Co
     protected LinearReward r;
     protected Set!State[] occluded_states;
     protected size_t repeats;
+
+    protected size_t repeat;
+    protected size_t traj_num;
     
     public this(Model m, LinearReward r, size_t repeats, Set!State[] occluded_states, bool extend_terminals_to_equal_length = true) {
         this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
@@ -145,7 +148,7 @@ abstract class MCMCOccludedTrajectoryToTrajectoryDistr: Sequence_Distribution_Co
         Sequence!(Distribution!(State, Action))[] returnval = new Sequence!(Distribution!(State, Action))[trajectories.length];
 
         
-        foreach (i, traj ; trajectories) {
+        foreach (traj_num, traj ; trajectories) {
             
             // build an observation sequence
 
@@ -197,7 +200,7 @@ abstract class MCMCOccludedTrajectoryToTrajectoryDistr: Sequence_Distribution_Co
             
             foreach( repeat; 0 .. repeats) {
                 
-                auto results = call_solver(observations, transitions, initial_state, i);
+                auto results = call_solver(observations, transitions, initial_state, traj_num);
 
                 foreach(t, ref timestep; sum_results) {
                     timestep = tuple(timestep[0] + results[t][0]);
@@ -211,7 +214,7 @@ abstract class MCMCOccludedTrajectoryToTrajectoryDistr: Sequence_Distribution_Co
                 avg_results[t][0].normalize();
             }
 
-            returnval[i] = avg_results;
+            returnval[traj_num] = avg_results;
 
         }
 
@@ -269,20 +272,34 @@ class GibbsSamplingApproximateOccludedTrajectoryToTrajectoryDistr: MCMCOccludedT
 }
 
 
+enum HybridMCMCMode {
+
+    Fixed,
+    Adaptive,
+    AdaptiveImportanceSampling
+}
+
 class HybridMCMCApproximateOccludedTrajectoryToTrajectoryDistr: MCMCOccludedTrajectoryToTrajectoryDistr {
 
     protected size_t burn_in_samples;
     protected size_t num_samples;
     protected Sequence!(Distribution!(Tuple!(State, Action)))[] proposalDistributions;
-    protected bool use_adaptive;
+    protected HybridMCMCMode mode;
+    protected const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check_user;
+    
             
-    public this(Model m, LinearReward r, size_t repeats, Set!State[] occluded_states, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, bool useAdaptiveProposalDistribution = true, bool extend_terminals_to_equal_length = true) {
+    public this(Model m, LinearReward r, size_t repeats, Set!State[] occluded_states, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, HybridMCMCMode mode = HybridMCMCMode.AdaptiveImportanceSampling, const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check = null, bool extend_terminals_to_equal_length = true) {
         super(m, r, repeats, occluded_states, extend_terminals_to_equal_length);
 
         this.burn_in_samples = burn_in_samples;
         this.num_samples = num_samples;
-        this.use_adaptive = useAdaptiveProposalDistribution;
+        this.mode = mode;
+        this.convergence_check_user = convergence_check;
 
+        setProposal(proposalDistributions);
+    }
+
+    public void setProposal(Sequence!(Distribution!(State, Action))[] proposalDistributions) {
         this.proposalDistributions = new Sequence!(Distribution!(Tuple!(State, Action)))[proposalDistributions.length];
         foreach(i; 0 .. proposalDistributions.length) {
             this.proposalDistributions[i] = new Sequence!(Distribution!(Tuple!(State, Action)))(proposalDistributions[i].length);
@@ -294,12 +311,27 @@ class HybridMCMCApproximateOccludedTrajectoryToTrajectoryDistr: MCMCOccludedTraj
 
     protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
 
+
+        bool delegate(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) temp_delegate = null;
+
+        if (convergence_check_user ! is null)
+            temp_delegate = &convergence_check;
+        
         Sequence!(Distribution!(Tuple!(State, Action))) temp_sequence;
 
-        if (use_adaptive) {
-            temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
-        } else {
-            temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+        switch (mode) {
+
+            case HybridMCMCMode.Fixed:
+                temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
+                break;
+            case HybridMCMCMode.Adaptive:
+                temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
+                break;
+            case HybridMCMCMode.AdaptiveImportanceSampling:
+                temp_sequence = AdaptiveHybridMCMCIS!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
+                break;
+            default:
+                throw new Exception("Invalid Mode");
         }
         
         auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
@@ -311,6 +343,18 @@ class HybridMCMCApproximateOccludedTrajectoryToTrajectoryDistr: MCMCOccludedTraj
         return results;        
 
     }
+
+    bool convergence_check(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) {
+
+        auto temp_sequence = new Sequence!(Distribution!(State, Action))(current.length);
+        foreach (t, timestep; current) {
+            temp_sequence[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return convergence_check_user(temp_sequence, traj_num, repeat, iteration);
+
+    }
+    
 }
 
 
@@ -341,12 +385,12 @@ class GibbsSamplingApproximateStaticOccludedTrajectoryToTrajectoryDistr: GibbsSa
 
 class HybridMCMCApproximateStaticOccludedTrajectoryToTrajectoryDistr: HybridMCMCApproximateOccludedTrajectoryToTrajectoryDistr {
 
-    public this(Model m, LinearReward r, size_t repeats, Set!State occluded_states, size_t max_trajectory_length, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, bool useAdaptiveProposalDistribution = true, bool extend_terminals_to_equal_length = true) {
+    public this(Model m, LinearReward r, size_t repeats, Set!State occluded_states, size_t max_trajectory_length, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, HybridMCMCMode mode = HybridMCMCMode.AdaptiveImportanceSampling, const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check = null, bool extend_terminals_to_equal_length = true) {
 
         Set!State [] oc = new Set!State[max_trajectory_length];
         oc[] = occluded_states;
 
-        super(m, r, repeats, oc, burn_in_samples, num_samples, proposalDistributions, useAdaptiveProposalDistribution , extend_terminals_to_equal_length);
+        super(m, r, repeats, oc, burn_in_samples, num_samples, proposalDistributions, mode, convergence_check , extend_terminals_to_equal_length);
         
     }
 }

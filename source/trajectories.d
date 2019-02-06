@@ -251,6 +251,9 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
     protected Model m;
     protected LinearReward r;
     protected size_t repeats;
+
+    protected size_t repeat;
+    protected size_t traj_num;
         
     public this(Model m, LinearReward r, size_t repeats, bool extend_terminals_to_equal_length = true) {
         this.extend_terminals_to_equal_length = extend_terminals_to_equal_length;
@@ -274,7 +277,7 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
         auto temporary = new Distribution!(State)(m.S(), DistInitType.Uniform);
         auto missing_observation = pack_distribution(policy * temporary);
                     
-        foreach (i, traj ; trajectories) {
+        foreach (traj_num, traj ; trajectories) {
             
             // build an observation sequence
 
@@ -321,7 +324,7 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
             
            foreach(repeat; 0 .. repeats) {
                 
-                auto results = call_solver(observations, transitions, initial_state, i);
+                auto results = call_solver(observations, transitions, initial_state, traj_num);
 
                 foreach(t, ref timestep; sum_results) {
                     timestep = tuple(timestep[0] + results[t][0]);
@@ -335,7 +338,7 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
                 avg_results[t][0].normalize();
             }
 
-            returnval[i] = avg_results;
+            returnval[traj_num] = avg_results;
             
         }
 
@@ -407,14 +410,21 @@ class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajec
     protected size_t num_samples;
     protected Sequence!(Distribution!(Tuple!(State, Action)))[] proposalDistributions;
     protected HybridMCMCMode mode;
-            
-    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, HybridMCMCMode mode = HybridMCMCMode.AdaptiveImportanceSampling, bool extend_terminals_to_equal_length = true) {
+    protected const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check_user;
+
+    
+    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, Sequence!(Distribution!(State, Action))[] proposalDistributions, HybridMCMCMode mode = HybridMCMCMode.AdaptiveImportanceSampling, const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check = null, bool extend_terminals_to_equal_length = true) {
         super(m, r, repeats, extend_terminals_to_equal_length);
 
         this.burn_in_samples = burn_in_samples;
         this.num_samples = num_samples;
         this.mode = mode;
+        this.convergence_check_user = convergence_check;
 
+        setProposal(proposalDistributions);
+    }
+
+    public void setProposal(Sequence!(Distribution!(State, Action))[] proposalDistributions) {
         this.proposalDistributions = new Sequence!(Distribution!(Tuple!(State, Action)))[proposalDistributions.length];
         foreach(i; 0 .. proposalDistributions.length) {
             this.proposalDistributions[i] = new Sequence!(Distribution!(Tuple!(State, Action)))(proposalDistributions[i].length);
@@ -426,18 +436,24 @@ class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajec
 
     protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
 
+
+        bool delegate(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) temp_delegate = null;
+
+        if (convergence_check_user ! is null)
+            temp_delegate = &convergence_check;
+
         Sequence!(Distribution!(Tuple!(State, Action))) temp_sequence;
 
         switch (mode) {
 
             case HybridMCMCMode.Fixed:
-                temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                temp_sequence = HybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
                 break;
             case HybridMCMCMode.Adaptive:
-                temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                temp_sequence = AdaptiveHybridMCMC!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
                 break;
             case HybridMCMCMode.AdaptiveImportanceSampling:
-                temp_sequence = AdaptiveHybridMCMCIS!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples);
+                temp_sequence = AdaptiveHybridMCMCIS!(Tuple!(State, Action))(observations, transitions, initial_state, proposalDistributions[traj_num], burn_in_samples, num_samples, temp_delegate);
                 break;
             default:
                 throw new Exception("Invalid Mode");
@@ -450,6 +466,17 @@ class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajec
         }
 
         return results;        
+
+    }
+    
+    bool convergence_check(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) {
+
+        auto temp_sequence = new Sequence!(Distribution!(State, Action))(current.length);
+        foreach (t, timestep; current) {
+            temp_sequence[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return convergence_check_user(temp_sequence, traj_num, repeat, iteration);
 
     }
 }
