@@ -374,12 +374,15 @@ class GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTra
 
     protected size_t burn_in_samples;
     protected size_t num_samples;
+    protected const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check_user;
         
-    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, bool extend_terminals_to_equal_length = true) {
+    public this(Model m, LinearReward r, size_t repeats, size_t burn_in_samples, size_t num_samples, const bool delegate(Sequence!(Distribution!(State, Action)) , size_t, size_t, size_t) convergence_check = null, bool extend_terminals_to_equal_length = true) {
         super(m, r, repeats, extend_terminals_to_equal_length);
 
         this.burn_in_samples = burn_in_samples;
         this.num_samples = num_samples;
+        this.convergence_check_user = convergence_check;
+
     }
 
     protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
@@ -392,6 +395,20 @@ class GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTra
         }
 
         return results;        
+
+    }
+        
+    bool convergence_check(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) {
+
+        if (iteration % 100 != 0)
+            return false;
+
+        auto temp_sequence = new Sequence!(Distribution!(State, Action))(current.length);
+        foreach (t, timestep; current) {
+            temp_sequence[t] = tuple(unpack_distribution(timestep[0]));
+        }
+
+        return convergence_check_user(temp_sequence, traj_num, repeat, iteration);
 
     }
 }
@@ -470,6 +487,9 @@ class HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTrajec
     }
     
     bool convergence_check(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) {
+
+        if (iteration % 100 != 0)
+            return false;
 
         auto temp_sequence = new Sequence!(Distribution!(State, Action))(current.length);
         foreach (t, timestep; current) {
