@@ -889,7 +889,7 @@ class Function (RETURN_TYPE, PARAM ...) {
 
                 auto newKey = tuple(b_key[], f[b_key][0] );
 
-                chosen[b_key] = storage[newKey];
+                chosen[b_key] = storage.get(newKey, funct_default);
 
             }
 
@@ -1142,7 +1142,8 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
     	double returnval = 0;
     	foreach (i; mySet) {
             auto pr = storage.get(i, funct_default);
-    		returnval += pr * log ( pr / other_dist[i]);
+            if (pr != 0.0 && pr != -0.0)            
+    		  returnval += pr * log ( pr / other_dist[i]);
     	}
     	return returnval;
 	
@@ -1152,8 +1153,9 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
         double returnval = 0;
 
         foreach (i; mySet) {
-            auto pr = storage.get(i, funct_default);            
-            returnval += pr * log (pr);
+            auto pr = storage.get(i, funct_default);
+            if (pr != 0.0 && pr != -0.0)            
+                returnval += pr * log (pr);
         }
         return -returnval;
 
