@@ -278,6 +278,7 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
         auto missing_observation = pack_distribution(policy * temporary);
                     
         foreach (traj_num, traj ; trajectories) {
+            this.traj_num = traj_num;
             
             // build an observation sequence
 
@@ -323,6 +324,7 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
             }
             
            foreach(repeat; 0 .. repeats) {
+                this.repeat = repeat;
                 
                 auto results = call_solver(observations, transitions, initial_state, traj_num);
 
