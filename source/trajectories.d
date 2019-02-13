@@ -319,17 +319,17 @@ abstract class MCMCPartialTrajectoryToTrajectoryDistr: Sequence_Distribution_Com
             Distribution!(Tuple!(State, Action)) initial_state = pack_distribution(policy * m.initialStateDistribution());
 
             Sequence!(Function!(double, State, Action)) sum_results = new Sequence!(Function!(double, State, Action))(observations.length);
-            foreach(ref timestep; sum_results) {
-                timestep = tuple(new Function!(double, State, Action)(full_space, 0.0));
+            foreach(t; 0 .. sum_results.length) {
+                sum_results[t] = tuple(new Function!(double, State, Action)(full_space, 0.0));
             }
             
-           foreach(repeat; 0 .. repeats) {
+            foreach(repeat; 0 .. repeats) {
                 this.repeat = repeat;
                 
                 auto results = call_solver(observations, transitions, initial_state, traj_num);
 
-                foreach(t, ref timestep; sum_results) {
-                    timestep = tuple(timestep[0] + results[t][0]);
+                foreach(t; 0 .. results.length) {
+                    sum_results[t] = tuple(sum_results[t][0] + results[t][0]);
                 }
 
             }
