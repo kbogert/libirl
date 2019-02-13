@@ -263,7 +263,7 @@ unittest {
     auto initial = new Distribution!(size_t)(states, DistInitType.Uniform);
 
     foreach (i; 0 .. 10) {
-        auto results = AdaptiveHybridMCMC!(size_t)(observations, transitions, initial, observations, 10000, 1500000);
+        auto results = AdaptiveHybridMCMC!(size_t)(observations, transitions, initial, observations, 10000, 2000000);
 
         assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
         assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
@@ -332,7 +332,7 @@ unittest {
     auto initial = new Distribution!(size_t)(states, DistInitType.Uniform);
 
     foreach (i; 0 .. 10) {
-        auto results = AdaptiveHybridMCMCIS!(size_t)(observations, transitions, initial, observations, 10000, 800000);
+        auto results = AdaptiveHybridMCMCIS!(size_t)(observations, transitions, initial, observations, 10000, 1500000);
 
         assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
         assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
