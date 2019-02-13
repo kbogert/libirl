@@ -10,7 +10,7 @@ library:
 test:
   script:
     - dub build --build=unittest --root=test --config=fullunittest
-    - test/libirl-test
+    - unbuffer test/libirl-test
   stage: test
   only:
     - master
