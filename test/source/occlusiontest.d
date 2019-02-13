@@ -283,7 +283,7 @@ unittest {
     auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())) );
 
     // random occlusion
-    foreach (i; 0 .. 10) {
+    foreach (i; 0 .. 5) {
         auto occluded_states = randomOccludedStates(model, uniform(cast(int)(0.1 * (sizeX * sizeY)), cast(int)(0.8 * (sizeX * sizeY))));
         
         auto trajectoryCalc = new ExactStaticOccludedTrajectoryToTrajectoryDistr(model, lr, occluded_states, 20 );
@@ -309,10 +309,11 @@ unittest {
     }
 
     // chunks of the gridworld occluded
-    foreach (i; 0 .. 16) {
+    foreach (iter; 0 .. 2) {
 
         Tuple!(State) [] occ = new Tuple!(State)[(sizeX * sizeY) / 4];
 
+        auto i = uniform(0, 16);
         size_t count = 0;
         foreach (x ; 0 .. sizeX / 2) {
             foreach(y ; 0 .. sizeY / 2) {
