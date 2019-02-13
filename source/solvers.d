@@ -318,16 +318,30 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
 
     // create initial state
 
-    foreach(t; 0 .. observations.length) {
+    bool allSampled = false;
+    size_t attempts = 0;
+    do {
+        foreach(t; 0 .. observations.length) {
 
-        if (t == 0) {
-            currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
+            try {
+                if (t == 0) {
+                    currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
             
-        } else {
-            currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
+                } else {
+                    currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
 
+                }
+            } catch (Exception e) {
+                // assume this is due to distributions with all zeros
+                allSampled = false;
+                attempts ++;
+                if (attempts > 1000)
+                    throw new Exception("Unable to create initial trajectory sample after 1000 attempts");
+                break;
+            }
+            allSampled = true;
         }
-    }
+    } while (!allSampled);
     
 
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
@@ -496,16 +510,30 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
 
     // create initial state
 
-    foreach(t; 0 .. observations.length) {
+    bool allSampled = false;
+    size_t attempts = 0;
+    do {
+        foreach(t; 0 .. observations.length) {
 
-        if (t == 0) {
-            currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
+            try {
+                if (t == 0) {
+                    currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
             
-        } else {
-            currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
+                } else {
+                    currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
 
+                }
+            } catch (Exception e) {
+                // assume this is due to distributions with all zeros
+                allSampled = false;
+                attempts ++;
+                if (attempts > 1000)
+                    throw new Exception("Unable to create initial trajectory sample after 1000 attempts");
+                break;
+            }
+            allSampled = true;
         }
-    }
+    } while (!allSampled);
 
     
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
