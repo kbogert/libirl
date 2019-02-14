@@ -238,10 +238,7 @@ unittest {
 
     int sizeX = 6;
     int sizeY = 6;
-    version(fullunittest) {
-        sizeX = 8;
-        sizeY = 8;
-    }
+
     double gamma = 0.95;
     double value_error = 0.1;
 
@@ -350,7 +347,7 @@ unittest {
 
 @name("LME IRL random MDP occlusion test")
 unittest {
-    foreach (iter; 0 .. 50) {
+    foreach (iter; 0 .. 10) {
 
         UniqueFeaturesPerStateActionReward lr;
         auto model = generateRandomMDP(6, 3, 10, 1, 0.95, lr);
