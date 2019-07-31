@@ -316,6 +316,7 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
     
     Sequence!(T) currentState = new Sequence!(T)(observations.length);
 
+    
     // create initial state
 
     bool allSampled = false;
@@ -342,7 +343,20 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
             allSampled = true;
         }
     } while (!allSampled);
-    
+
+
+    double [] oldSampleProbs = new double[observations.length];
+
+    // initialize old sample probs
+    foreach(t; 0 .. observations.length) {
+        if (t == 0) {
+            oldSampleProbs[t] = ((initial_state[currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
+        } else if (t == observations.length - 1) {
+            oldSampleProbs[t] = (( observations[t][0][currentState[t]] * transitions[currentState[t-1]][currentState[t]]) / proposal_distributions[t][0][currentState[t]]);
+        } else {
+            oldSampleProbs[t] = (( transitions[currentState[t-1]][currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
+        }
+    }
 
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
@@ -353,26 +367,24 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
         newSample = proposal_distributions[position][0].sample();
 
         double newSampleProb;
-        double oldSampleProb;
         
         if (position == 0) {
             newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = ((initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
         } else if (position == observations.length - 1) {
             newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = (( observations[position][0][currentState[position]] * transitions[currentState[position-1]][currentState[position]]) / proposal_distributions[position][0][currentState[position]]);
         } else {
             newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = (( transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
         }
         
-        double acc = (fmin(1, newSampleProb / oldSampleProb ));
+        double acc = (fmin(1, newSampleProb / oldSampleProbs[position] ));
 
         if (uniform01() <= acc) {
             currentState[position] = newSample;
+            oldSampleProbs[position] = newSampleProb;
         } else {
             if (adaptive_proposal)
-                proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((100.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
+                proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((10.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
+//                proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - (1.0 / (i * i)));
         }
 
         if (i > burn_in_samples) {
@@ -535,6 +547,20 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
         }
     } while (!allSampled);
 
+
+    double [] oldSampleProbs = new double[observations.length];
+    
+
+    // initialize old sample probs
+    foreach(t; 0 .. observations.length) {
+        if (t == 0) {
+            oldSampleProbs[t] = ((initial_state[currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
+        } else if (t == observations.length - 1) {
+            oldSampleProbs[t] = (( observations[t][0][currentState[t]] * transitions[currentState[t-1]][currentState[t]]) / proposal_distributions[t][0][currentState[t]]);
+        } else {
+            oldSampleProbs[t] = (( transitions[currentState[t-1]][currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
+        }
+    }
     
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
@@ -545,43 +571,38 @@ Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) 
         newSample = proposal_distributions[position][0].sample();
 
         double newSampleProb;
-        double oldSampleProb;
         
         if (position == 0) {
             newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            auto sampleDist = initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]];
-            oldSampleProb = sampleDist / proposal_distributions[position][0][currentState[position]];
         } else if (position == observations.length - 1) {
             newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
-            auto sampleDist = transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]];
-            oldSampleProb = sampleDist / proposal_distributions[position][0][currentState[position]];
         } else {
             newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            auto sampleDist = transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]];
-            oldSampleProb = sampleDist / proposal_distributions[position][0][currentState[position]];
         }
 
 
-        double acc = (fmin(1, newSampleProb / oldSampleProb ));
-
-        auto chance = uniform01();
-
-        if (chance < acc) 
-            currentState[position] = newSample;
-            
         if (i > burn_in_samples && newSampleProb != 0.0) {
-            returnval[position][0][newSample] += newSampleProb / oldSampleProb;
+            returnval[position][0][newSample] += newSampleProb / oldSampleProbs[position];           
+        }
+        
+        auto chance = uniform01();
+        double acc = (fmin(1, newSampleProb / oldSampleProbs[position] ));
+
+        if (chance < acc) {
+            currentState[position] = newSample;
+            oldSampleProbs[position] = newSampleProb;
+        } else {
+            proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((10.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
+        
+        }
+        
+        if (i > burn_in_samples && newSampleProb != 0.0) {
 
             if (convergence_check ! is null && 
                 convergence_check(returnval, i - burn_in_samples))
                 break;
            
         }
-
-        if (chance > acc) {
-            proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((100.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
-        }
-        
     }
 
     foreach(entry; returnval) {
