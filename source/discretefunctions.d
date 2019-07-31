@@ -1704,8 +1704,10 @@ class ExponentialDistribution(PARAMS...) {
         p = (i in params);
         if (p !is null) {
             normalizer -= exp(*p);
+            *p = newval;
+        } else {
+            params[i] = newval;
         }
-        params[i] = newval;
         normalizer += exp(newval);
     }
 
@@ -1773,5 +1775,87 @@ class ExponentialDistribution(PARAMS...) {
         return returnval;
     }
             
+}
+
+Distribution!(T) set_to_uniform_probability(T)(Set!T input_set, Set!T full_set) {
+
+    Distribution!(T) returnval = new Distribution!T(full_set, 0.0);
+
+    foreach (x; input_set) {
+
+        returnval[x] = 1.0;
+    }
+
+    returnval.normalize();
+    return returnval;
+    
+}
+
+class DirichletProcess (T) {
+
+    private Distribution!(T) host_distribution;
+
+    private long [Tuple!T] sample_count;
+    private long n;
+    private double alpha;
+    
+
+    
+    public this (Distribution!(T) host_distribution, double alpha) {
+
+        if (alpha <= 0)
+            throw new Exception("Alpha must be a positive number");
+            
+        this.host_distribution = host_distribution;
+        n = 0;
+        this.alpha = alpha;
+
+        
+    }
+
+    public Tuple!T peek() {
+        import std.random;
+
+
+        auto pick = uniform01();
+        auto mass = alpha / (alpha + n - 1);
+
+        if (n <= 1 || mass >= pick) {
+
+            return host_distribution.sample();
+        }
+
+        foreach ( key, val; sample_count) {
+            mass += (cast(double)val) / (alpha + n - 1);
+
+            if (mass >= pick)
+                return key;
+        }        
+        
+    }
+
+    public void increment(Tuple!T observation) {
+
+        Tuple!T * p;
+        p = (observation in sample_count);
+        if (p !is null) {
+            *p += 1;
+        } else {
+            sample_count[observation] = 1;
+        }
+    }
+
+
+    public Tuple!T sample () {
+
+        auto returnval = peek();
+
+        increment(returnval);
+
+        return returnval;
+
+    }
+
+
 }
 
