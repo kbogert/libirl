@@ -234,17 +234,32 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
 
     // create initial state
 
-    foreach(t; 0 .. observations.length) {
+    bool allSampled = false;
+    size_t attempts = 0;
+    do {
+        foreach(t; 0 .. observations.length) {
 
-        if (t == 0) {
-            currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
+            try {
+                if (t == 0) {
+                    currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
             
-        } else {
-            currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
+                } else {
+                    currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
 
+                }
+            } catch (Exception e) {
+                // assume this is due to distributions with all zeros
+                allSampled = false;
+                attempts ++;
+                if (attempts > observations.length * initial_state.param_set().size() * 1000) {
+                    import std.conv;
+                    throw new Exception("Unable to create initial trajectory sample after" ~ to!string(observations.length * initial_state.param_set().size() * 1000) ~ " attempts");
+                }
+                break;
+            }
+            allSampled = true;
         }
-    }
-    
+    } while (!allSampled);    
 
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
@@ -275,7 +290,7 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
 
         if (i > burn_in_samples) {
 
-            returnval[position][0][newSample] += 0.01;
+            returnval[position][0][newSample] += 1;
             
             if (convergence_check ! is null && 
                 convergence_check(returnval, i - burn_in_samples))
@@ -293,19 +308,8 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
 }
 
 
+Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(ConditionalDistribution!(T, T)) proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
 
-Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) initial_proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null, bool adaptive_proposal = false) {
-
-
-    Sequence!(ExponentialDistribution!(T)) proposal_distributions = new Sequence!(ExponentialDistribution!(T))(observations.length);
-    foreach(t ; 0 .. observations.length) {
-        if (observations[t][0].entropy() == 0) {
-            proposal_distributions[t] = tuple(new ExponentialDistribution!(T)(observations[t][0]));            
-        } else {
-            proposal_distributions[t] = tuple(new ExponentialDistribution!(T)(initial_proposal_distributions[t][0]));
-        }
-    }
-    
     double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
 
     Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
@@ -316,7 +320,6 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
     
     Sequence!(T) currentState = new Sequence!(T)(observations.length);
 
-    
     // create initial state
 
     bool allSampled = false;
@@ -336,133 +339,37 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
                 // assume this is due to distributions with all zeros
                 allSampled = false;
                 attempts ++;
-                if (attempts > 1000)
-                    throw new Exception("Unable to create initial trajectory sample after 1000 attempts");
+                if (attempts > observations.length * initial_state.param_set().size() * 1000) {
+                    import std.conv;
+                    throw new Exception("Unable to create initial trajectory sample after" ~ to!string(observations.length * initial_state.param_set().size() * 1000) ~ " attempts");
+                }
                 break;
             }
             allSampled = true;
         }
     } while (!allSampled);
-
-
-    double [] oldSampleProbs = new double[observations.length];
-
-    // initialize old sample probs
-    foreach(t; 0 .. observations.length) {
-        if (t == 0) {
-            oldSampleProbs[t] = ((initial_state[currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
-        } else if (t == observations.length - 1) {
-            oldSampleProbs[t] = (( observations[t][0][currentState[t]] * transitions[currentState[t-1]][currentState[t]]) / proposal_distributions[t][0][currentState[t]]);
-        } else {
-            oldSampleProbs[t] = (( transitions[currentState[t-1]][currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
-        }
-    }
-
-    foreach(i; 0 .. (burn_in_samples + total_samples)) {
-
-        auto position = i % observations.length;
-
-        Tuple!T newSample;
-
-        newSample = proposal_distributions[position][0].sample();
-
-        double newSampleProb;
-        
-        if (position == 0) {
-            newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-        } else if (position == observations.length - 1) {
-            newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
-        } else {
-            newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-        }
-        
-        double acc = (fmin(1, newSampleProb / oldSampleProbs[position] ));
-
-        if (uniform01() <= acc) {
-            currentState[position] = newSample;
-            oldSampleProbs[position] = newSampleProb;
-        } else {
-            if (adaptive_proposal)
-                proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((10.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
-//                proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - (1.0 / (i * i)));
-        }
-
-        if (i > burn_in_samples) {
-
-            returnval[position][0][currentState[position]] += 0.01;
-            
-            if (convergence_check ! is null && 
-                convergence_check(returnval, i - burn_in_samples))
-                break;
-        }
-
-    }
-
-    foreach(i, entry; returnval) {
-        entry[0].normalize();
-    }    
-
-    return returnval;
-
-
-
-
-
-    /*    
-    double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
-
-    Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
-    foreach(t ; 0 .. observations.length) {
-        returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
-
-    }    
-    
-    Sequence!(T) currentState = new Sequence!(T)(observations.length);
-
-    // create initial state
-    double trajProb;
-    
-    do {
-        trajProb = 1.0;
-        foreach(t; 0 .. observations.length) {
-
-            if (t == 0) {
-                auto sampleDist = new Distribution!(T)((initial_state * observations[t][0]));
-                currentState[t] = sampleDist.sample();
-                trajProb *= sampleDist[currentState[t]];
-            
-            } else {
-                auto sampleDist = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0]));
-                currentState[t] = sampleDist.sample();
-                trajProb *= sampleDist[currentState[t]];
-
-            }
-            if (trajProb == 0.0) {
-                break;
-            }
-        }
-    } while (trajProb == 0.0);
     
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
         auto position = i % observations.length;
 
         Tuple!T newSample;
-
-        newSample = proposal_distributions[position][0].sample();
-
+        do {
+            newSample =proposal_distributions[position][0][currentState[position]].sample();
+        } while (newSample == currentState[position]);
+       
         double newSampleProb;
         double oldSampleProb;
         
         if (position == 0) {
-            newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = ((initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
+            newSampleProb = (initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) * proposal_distributions[position][0][newSample][currentState[position]];
+            oldSampleProb = (initial_state[currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) * proposal_distributions[position][0][currentState[position]][newSample];
         } else if (position == observations.length - 1) {
-            newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = (( observations[position][0][currentState[position]] * transitions[currentState[position-1]][currentState[position]]) / proposal_distributions[position][0][currentState[position]]);
+            newSampleProb = ( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) * proposal_distributions[position][0][newSample][currentState[position]];
+            oldSampleProb = ( observations[position][0][currentState[position]] * transitions[currentState[position-1]][currentState[position]]) * proposal_distributions[position][0][currentState[position]][newSample];
         } else {
-            newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-            oldSampleProb = (( transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) / proposal_distributions[position][0][currentState[position]]);
+            newSampleProb = ( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) * proposal_distributions[position][0][newSample][currentState[position]];
+            oldSampleProb = ( transitions[currentState[position-1]][currentState[position]] * observations[position][0][currentState[position]] * transitions[currentState[position]][currentState[position+1]]) * proposal_distributions[position][0][currentState[position]][newSample];
         }
         
         double acc = (fmin(1, newSampleProb / oldSampleProb ));
@@ -473,10 +380,10 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
 
         if (i > burn_in_samples) {
 
-            returnval[position][0][currentState[position]] += 0.01;
+            returnval[position][0][currentState[position]] += 1;
 
             if (convergence_check ! is null && 
-                        convergence_check(returnval, i - burn_in_samples))
+                    convergence_check(returnval, i - burn_in_samples))
                 break;
         }
 
@@ -486,129 +393,8 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
         entry[0].normalize();
     }    
 
-
-    return returnval;*/
-}
-
-
-Sequence!(Distribution!(T)) AdaptiveHybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) initial_proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
-
-    return HybridMCMC!(T)(observations, transitions, initial_state, initial_proposal_distributions, burn_in_samples, total_samples, convergence_check, true);
-}
-
-
-
-
-Sequence!(Distribution!(T)) AdaptiveHybridMCMCIS(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(Distribution!(T)) initial_proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
-
-    Sequence!(ExponentialDistribution!(T)) proposal_distributions = new Sequence!(ExponentialDistribution!(T))(observations.length);
-    foreach(t ; 0 .. observations.length) {
-        if (observations[t][0].entropy() == 0) {
-            proposal_distributions[t] = tuple(new ExponentialDistribution!(T)(observations[t][0]));            
-        } else {
-            proposal_distributions[t] = tuple(new ExponentialDistribution!(T)(initial_proposal_distributions[t][0]));
-        }
-    }
-
-    double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
-
-    Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
-    foreach(t ; 0 .. observations.length) {
-        returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
-
-    }    
-    
-    Sequence!(T) currentState = new Sequence!(T)(observations.length);
-
-    // create initial state
-
-    bool allSampled = false;
-    size_t attempts = 0;
-    do {
-        foreach(t; 0 .. observations.length) {
-
-            try {
-                if (t == 0) {
-                    currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
-            
-                } else {
-                    currentState[t] = new Distribution!(T)((transitions[currentState[t-1]] * observations[t][0])).sample();
-
-                }
-            } catch (Exception e) {
-                // assume this is due to distributions with all zeros
-                allSampled = false;
-                attempts ++;
-                if (attempts > 1000)
-                    throw new Exception("Unable to create initial trajectory sample after 1000 attempts");
-                break;
-            }
-            allSampled = true;
-        }
-    } while (!allSampled);
-
-
-    double [] oldSampleProbs = new double[observations.length];
-    
-
-    // initialize old sample probs
-    foreach(t; 0 .. observations.length) {
-        if (t == 0) {
-            oldSampleProbs[t] = ((initial_state[currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
-        } else if (t == observations.length - 1) {
-            oldSampleProbs[t] = (( observations[t][0][currentState[t]] * transitions[currentState[t-1]][currentState[t]]) / proposal_distributions[t][0][currentState[t]]);
-        } else {
-            oldSampleProbs[t] = (( transitions[currentState[t-1]][currentState[t]] * observations[t][0][currentState[t]] * transitions[currentState[t]][currentState[t+1]]) / proposal_distributions[t][0][currentState[t]]);
-        }
-    }
-    
-    foreach(i; 0 .. (burn_in_samples + total_samples)) {
-
-        auto position = i % observations.length;
-
-        Tuple!T newSample;
-
-        newSample = proposal_distributions[position][0].sample();
-
-        double newSampleProb;
-        
-        if (position == 0) {
-            newSampleProb = ((initial_state[newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-        } else if (position == observations.length - 1) {
-            newSampleProb = (( observations[position][0][newSample] * transitions[currentState[position-1]][newSample]) / proposal_distributions[position][0][newSample]);
-        } else {
-            newSampleProb = (( transitions[currentState[position-1]][newSample] * observations[position][0][newSample] * transitions[newSample][currentState[position+1]]) / proposal_distributions[position][0][newSample]);
-        }
-
-
-        if (i > burn_in_samples && newSampleProb != 0.0) {
-            returnval[position][0][newSample] += newSampleProb / oldSampleProbs[position];           
-        }
-        
-        auto chance = uniform01();
-        double acc = (fmin(1, newSampleProb / oldSampleProbs[position] ));
-
-        if (chance < acc) {
-            currentState[position] = newSample;
-            oldSampleProbs[position] = newSampleProb;
-        } else {
-            proposal_distributions[position][0].setParam(newSample, proposal_distributions[position][0].getParam(newSample) - ((10.0 * observations[position][0].param_set().size()) / (total_samples + burn_in_samples)));
-        
-        }
-        
-        if (i > burn_in_samples && newSampleProb != 0.0) {
-
-            if (convergence_check ! is null && 
-                convergence_check(returnval, i - burn_in_samples))
-                break;
-           
-        }
-    }
-
-    foreach(entry; returnval) {
-        entry[0].normalize();
-    }    
 
     return returnval;
 }
+
 
