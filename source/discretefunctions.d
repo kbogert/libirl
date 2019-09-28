@@ -334,7 +334,7 @@ class Function (RETURN_TYPE, PARAM ...) {
             return *p;
         }
         if ( mySet !is null && ! mySet.contains(i)) {
-            throw new Exception("ERROR, key is not in the set this function is defined over.");
+            throw new Exception("ERROR, key " ~ to!string(i) ~ "is not in the set this function is defined over.");
         }
         return funct_default;
     }
@@ -1818,31 +1818,37 @@ class DirichletProcess (T) {
 
 
         auto pick = uniform01();
-        auto mass = alpha / (alpha + n - 1);
+        double denom = alpha + n;
+        double mass = alpha / denom;
 
-        if (n <= 1 || mass >= pick) {
+        if (n < 1 || mass >= pick) {
 
             return host_distribution.sample();
         }
 
+        Tuple!T returnval;
         foreach ( key, val; sample_count) {
-            mass += (cast(double)val) / (alpha + n - 1);
+            mass += val / denom;
 
             if (mass >= pick)
                 return key;
-        }        
-        
+            returnval = key;
+        }
+
+        return returnval;        
     }
 
     public void increment(Tuple!T observation) {
 
-        Tuple!T * p;
+        long * p;
         p = (observation in sample_count);
         if (p !is null) {
             *p += 1;
         } else {
             sample_count[observation] = 1;
         }
+
+        n++;
     }
 
 
@@ -1856,6 +1862,13 @@ class DirichletProcess (T) {
 
     }
 
+    public double probabilityOf(Tuple!T observation) {
+
+        double denom = alpha + n;
+        
+        return host_distribution[observation] * (alpha / denom) + 
+                sample_count.get(observation, 0) / denom;
+    }
 
 }
 
