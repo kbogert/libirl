@@ -4,9 +4,38 @@ import maxentIRL;
 import discretemdp;
 import discretefunctions;
 import std.typecons;
+import std.conv;
 
 class Observation {
 
+}
+
+class GenericObservation : Observation {
+
+    private int id;
+
+    public this(int i) {
+        id = i;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public override string toString() {
+        return "Observation: " ~ to!string(id);
+    }
+
+    override bool opEquals(Object o) {
+        auto rhs = cast(GenericObservation)o;
+        if (!rhs) return false;
+
+        return id == rhs.id;
+    }
+
+    override size_t toHash() @trusted nothrow {
+        return id;
+    }    
 }
 
 
