@@ -1791,6 +1791,186 @@ Distribution!(T) set_to_uniform_probability(T)(Set!T input_set, Set!T full_set) 
     
 }
 
+// a continuous distribution over discrete distributions, parameterized by alphas
+class DirichletDistribution (PARAMS ...) {
+    private double [Tuple!(PARAMS)] alphas;
+    private double sumAlphas;
+    private double mag_alphas;
+    private Set!PARAMS space;
+    
+    public this(double [Tuple!(PARAMS)] alphas, Set!PARAMS space, bool add_one_to_all_alphas = false) {
+        this.space = space;
+        setAlphas(alphas, add_one_to_all_alphas);
+        
+    }
+
+    public double [Tuple!(PARAMS)] getAlphas() {
+        return alphas.dup;
+    }
+
+    public Set!(PARAMS) param_set() {
+        return space;
+    }
+    
+    public void setAlphas(double [Tuple!(PARAMS)] alphas, bool add_one_to_all_alphas = false) {
+        if (alphas.length != space.size()) {
+            throw new Exception("Number of alpha parameters must match the number of variables in the set");
+        }
+        
+        this.alphas = alphas.dup;
+        if (add_one_to_all_alphas) {
+            foreach (s ; space) {
+                double * p;
+                p = s in alphas;
+                if (p !is null)
+                    *p += 1;
+                else
+                    this.alphas[s] = 1;
+            }
+        }
+        
+        double sum = 0.0;
+        double mag = 0.0;
+        foreach (a; alphas) {
+            sum += a;
+            mag += a*a;
+        }
+        sumAlphas = sum;
+        mag_alphas = sqrt(mag);
+    }
+
+    public Distribution!(PARAMS) sample() {
+        double [Tuple!(PARAMS)] arr;
+
+        foreach (s; space) {
+
+            arr[s] = gamma_sample(alphas[s], 1.0);
+        }
+
+        auto returnval = new Distribution!(PARAMS)(space, arr);
+        returnval.normalize();
+
+        return returnval;
+    }
+
+    public Distribution!(PARAMS) mean() {
+
+        double [Tuple!(PARAMS)] arr;
+
+        foreach (s; space) {
+
+            arr[s] = alphas[s] / sumAlphas;
+        }
+
+        return new Distribution!(PARAMS)(space, arr);
+        
+    }
+
+    private double normal_sample() {
+        import std.random;
+        double total = 0;
+        for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
+           total += uniform01();
+        return total - 6;
+    }
+
+    private double gamma_sample(double alpha, double beta) {
+
+        if (alpha >= 1.0 ) {
+            return beta * Marsaglia_gamma(alpha);
+        } else {
+            return beta * Ahrens_Dieter_gamma(alpha);
+        }
+    }
+
+    private double Marsaglia_gamma(double alpha) {
+
+        double d = alpha - (1.0 / 3);
+        double c = 1.0 / sqrt(9 * d);
+
+        do {
+            double X = normal_sample();
+            double v = pow((1 + c * X), 3);
+
+            import std.random;
+            if (v > 0 && log(uniform01()) < ((X*X) / 2) + d - d*v + d * log (v))
+                return d * v;
+        } while(true);
+        
+    }
+
+    private double Ahrens_Dieter_gamma(double alpha) {
+
+        throw new Exception("Not implemented");
+    }
+
+    double opIndex(Distribution!(PARAMS) i ) {
+        import std.mathspecial;
+        
+        double numerator = 1.0;
+        double denominator = 1.0;
+
+        foreach (entry; space) {
+
+            numerator *= pow(i[entry], alphas[entry] - 1.0);
+            denominator *= gamma(alphas[entry]);            
+        }
+
+        denominator /= gamma(sumAlphas);
+
+        return numerator / denominator;
+    }
+
+    public void scale(double scale_val, double min = 1.0) {
+
+
+        
+        double newSumAlphas = 0.0;
+        double newMagAlphas = 0.0;
+        
+        foreach (entry; space) {
+
+            alphas[entry] = fmax(min, (scale_val / mag_alphas) * alphas[entry]);
+            newSumAlphas += alphas[entry]; 
+            newMagAlphas += alphas[entry]*alphas[entry];         
+        }
+
+        sumAlphas = newSumAlphas;
+        mag_alphas = sqrt(newMagAlphas);
+    }
+
+    public void addAlphas(double [Tuple!(PARAMS)] newVals) {
+        double [Tuple!(PARAMS)] tempVals;
+
+        foreach (entry; space) {
+
+            double a = 0.0;
+            double b = 0.0;
+            double * p;
+
+            p = entry in alphas;
+            if (p !is null)
+                a = *p;
+            p = entry in newVals;
+            if (p !is null)
+                b = *p;
+
+            tempVals[entry] = a + b;
+        }
+
+        setAlphas(tempVals);
+        
+    }
+
+    public double alpha_mag() {
+        return mag_alphas;
+    }
+
+    override string toString() {
+        return to!string(alphas);
+    }
+}
+
 class DirichletProcess (T) {
 
     private Distribution!(T) host_distribution;
