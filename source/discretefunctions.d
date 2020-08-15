@@ -1796,7 +1796,6 @@ Distribution!(T) set_to_uniform_probability(T)(Set!T input_set, Set!T full_set) 
 class DirichletDistribution (PARAMS ...) {
     private double [Tuple!(PARAMS)] alphas;
     private double sumAlphas;
-    private double mag_alphas;
     private Set!PARAMS space;
     
     public this(double [Tuple!(PARAMS)] alphas, Set!PARAMS space, bool add_one_to_all_alphas = false) {
@@ -1826,13 +1825,10 @@ class DirichletDistribution (PARAMS ...) {
         }
         
         double sum = 0.0;
-        double mag = 0.0;
         foreach (a; this.alphas) {
             sum += a;
-            mag += a*a;
         }
         sumAlphas = sum;
-        mag_alphas = sqrt(mag);
     }
 
     public Distribution!(PARAMS) sample() {
@@ -1936,18 +1932,15 @@ class DirichletDistribution (PARAMS ...) {
     public void scale(double scale_val, double min = 1.0) {
 
         double newSumAlphas = 0.0;
-        double newMagAlphas = 0.0;
         
         foreach (entry; space) {
 
 //            alphas[entry] = fmax(min, (scale_val / mag_alphas) * alphas[entry]);
             alphas[entry] = fmax(min, (scale_val / sumAlphas) * alphas[entry]);
             newSumAlphas += alphas[entry]; 
-            newMagAlphas += alphas[entry]*alphas[entry];         
         }
 
         sumAlphas = newSumAlphas;
-        mag_alphas = sqrt(newMagAlphas);
     }
 
     public void addAlphas(double [Tuple!(PARAMS)] newVals) {
@@ -1971,10 +1964,6 @@ class DirichletDistribution (PARAMS ...) {
 
         setAlphas(tempVals);
         
-    }
-
-    public double alpha_mag() {
-        return mag_alphas;
     }
 
     public double alpha_sum() {
