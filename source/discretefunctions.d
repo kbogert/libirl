@@ -6,6 +6,7 @@ import std.typetuple;
 import std.typecons;
 import std.conv;
 import std.math;
+import std.random;
 
 
 // could be optimized for 1D sets by removing the tuples, if I feel like it I guess
@@ -1820,18 +1821,13 @@ class DirichletDistribution (PARAMS ...) {
         this.alphas = alphas.dup;
         if (add_one_to_all_alphas) {
             foreach (s ; space) {
-                double * p;
-                p = s in alphas;
-                if (p !is null)
-                    *p += 1;
-                else
-                    this.alphas[s] = 1;
+                this.alphas[s] += 1;
             }
         }
         
         double sum = 0.0;
         double mag = 0.0;
-        foreach (a; alphas) {
+        foreach (a; this.alphas) {
             sum += a;
             mag += a*a;
         }
@@ -1866,8 +1862,26 @@ class DirichletDistribution (PARAMS ...) {
         
     }
 
+    public Distribution!(PARAMS) mode() {
+
+        foreach (s ; space) {
+            if (this.alphas[s] <= 1.0) {
+                throw new Exception("Mode undefined for alphas <= 1.0: " ~ to!string(this.alphas));
+            }
+        }
+            
+        double [Tuple!(PARAMS)] arr;
+
+        foreach (s; space) {
+
+            arr[s] = (alphas[s] - 1) / (sumAlphas - space.size());
+        }
+
+        return new Distribution!(PARAMS)(space, arr);
+        
+    }
+
     private double normal_sample() {
-        import std.random;
         double total = 0;
         for (int i = 0; i < 12; i ++)  // irwin-hall approximation of the normal distribution 
            total += uniform01();
@@ -1879,7 +1893,8 @@ class DirichletDistribution (PARAMS ...) {
         if (alpha >= 1.0 ) {
             return beta * Marsaglia_gamma(alpha);
         } else {
-            return beta * Ahrens_Dieter_gamma(alpha);
+            double gamma_a = Marsaglia_gamma(alpha + 1.0); 
+            return beta * gamma_a * pow(uniform01(), 1.0 / alpha);
         }
     }
 
@@ -1892,16 +1907,11 @@ class DirichletDistribution (PARAMS ...) {
             double X = normal_sample();
             double v = pow((1 + c * X), 3);
 
-            import std.random;
-            if (v > 0 && log(uniform01()) < ((X*X) / 2) + d - d*v + d * log (v))
+            double u = uniform01();
+            if (v > 0 && log(u) < ((X*X) / 2) + d - d*v + d * log (v))
                 return d * v;
         } while(true);
         
-    }
-
-    private double Ahrens_Dieter_gamma(double alpha) {
-
-        throw new Exception("Not implemented");
     }
 
     double opIndex(Distribution!(PARAMS) i ) {
@@ -1912,25 +1922,26 @@ class DirichletDistribution (PARAMS ...) {
 
         foreach (entry; space) {
 
-            numerator *= pow(i[entry], alphas[entry] - 1.0);
+            numerator *= pow(i[entry], alphas[entry] - 1);
             denominator *= gamma(alphas[entry]);            
         }
 
         denominator /= gamma(sumAlphas);
+//import std.stdio;
+//writeln("Dirichlet: " ~ to!string(alphas) ~ " " ~ to!string(sumAlphas) ~ " " ~ to!string(numerator) ~ " " ~ to!string(gamma(sumAlphas)));
 
         return numerator / denominator;
     }
 
     public void scale(double scale_val, double min = 1.0) {
 
-
-        
         double newSumAlphas = 0.0;
         double newMagAlphas = 0.0;
         
         foreach (entry; space) {
 
-            alphas[entry] = fmax(min, (scale_val / mag_alphas) * alphas[entry]);
+//            alphas[entry] = fmax(min, (scale_val / mag_alphas) * alphas[entry]);
+            alphas[entry] = fmax(min, (scale_val / sumAlphas) * alphas[entry]);
             newSumAlphas += alphas[entry]; 
             newMagAlphas += alphas[entry]*alphas[entry];         
         }
@@ -1964,6 +1975,10 @@ class DirichletDistribution (PARAMS ...) {
 
     public double alpha_mag() {
         return mag_alphas;
+    }
+
+    public double alpha_sum() {
+        return sumAlphas;
     }
 
     override string toString() {

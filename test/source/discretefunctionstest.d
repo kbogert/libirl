@@ -3,7 +3,7 @@ import tested;
 import std.conv;
 import std.math;
 import std.typecons;
-
+import std.random;
 
 
 double TOLERANCE = 0.000000001;
@@ -797,4 +797,125 @@ unittest {
 
     assert( testSet1.intersectionWith(testSet2.differenceWith(testSet1.intersectionWith(testSet2))).size() == 0, "Intersection, Difference and Intersection did not return the correct number of elements, expected " ~ to!string(0) ~ " but got " ~ to!string(testSet1.intersectionWith(testSet2.differenceWith(testSet1.intersectionWith(testSet2))).size()));
     
+}
+
+
+@name("Dirichlet test")
+unittest {
+
+    NumericSetSpace smallset = new NumericSetSpace(2);
+    double[Tuple!size_t] uniformAlphas;
+    foreach( s; smallset) {
+        uniformAlphas[s] = 1.0;
+    }
+    
+    DirichletDistribution!size_t symmetricTest = new DirichletDistribution!(size_t)(uniformAlphas, smallset);
+
+    // sampling tests
+    foreach (i; 0 .. 100) {
+
+        auto testDist = symmetricTest.sample();
+
+        assert(symmetricTest[testDist] == 1.0, "All distribution probabilities should equal 1");
+    }
+
+    // test convergence to mean
+
+    NumericSetSpace medset = new NumericSetSpace(10);
+
+    double previousAvgKLD = double.max;
+    foreach (scale; 1 .. 8) {
+
+        double[Tuple!size_t] alphas;
+        foreach( s; medset) {
+            alphas[s] = uniform(pow(2, scale - 1), pow(2, scale));
+        }
+        
+        DirichletDistribution!size_t convergenceTest = new DirichletDistribution!(size_t)(alphas, medset);
+
+        auto mean = convergenceTest.mean();
+//writeln(alphas);
+//writeln(mean);
+//writeln();        
+        double avgKLD = 0.0;
+
+        foreach (i; 0 .. 1000) {
+
+            auto testDist = convergenceTest.sample();
+            
+            avgKLD += testDist.KLD(mean);
+            
+        }        
+
+        avgKLD /= 100;
+//writeln(avgKLD);
+        assert (avgKLD < previousAvgKLD, "Distributions are not converging to the mean: avg " ~ to!string(avgKLD) ~ " previous " ~ to!string(previousAvgKLD) ~ " scale " ~ to!string(scale));
+
+        previousAvgKLD = avgKLD;
+    }
+
+    // mode has maximum probability
+
+    foreach (scale; 0 .. 8) {
+        double[Tuple!size_t] alphas;
+        foreach( s; medset) {
+            alphas[s] = uniform(0.1, pow(2, scale));
+        }
+        DirichletDistribution!size_t modeTest = new DirichletDistribution!(size_t)(alphas, medset, true);
+
+        auto mode = modeTest.mode();
+
+        foreach (i; 0 .. 1000) {
+
+            auto testDist = modeTest.sample();
+            
+            assert (modeTest[testDist] <= modeTest[mode], "The mode does not have the highest probability " ~ to!string(modeTest) ~ " mode " ~ to!string(modeTest[mode]) ~ " " ~ to!string(mode) ~ " Sample " ~ to!string(modeTest[testDist]) ~ " " ~ to!string(testDist));
+            
+        }        
+
+    }
+
+    // scaling does not change the mean
+
+   foreach (scale; 1 .. 8) {
+        double[Tuple!size_t] alphas;
+        foreach( s; medset) {
+            alphas[s] = uniform(1.1, 5);
+        }
+        DirichletDistribution!size_t scaleTest = new DirichletDistribution!(size_t)(alphas, medset, false);
+
+        auto originalmean = scaleTest.mean();
+
+        scaleTest.scale(scaleTest.alpha_sum() * uniform(1, pow(2, scale)), 0);
+
+        auto scaledmean = scaleTest.mean();
+
+        assert (originalmean.KLD(scaledmean) <= 0.000001, "The mean changes when scaled " ~ to!string(scaleTest) ~ " originalmean " ~ to!string(originalmean) ~ " scaledmean " ~ to!string(scaledmean) ~ " " ~ to!string(originalmean.KLD(scaledmean)));
+
+    }
+    
+    // higher scales make the mode approach the mean
+
+    
+   foreach (scale; 1 .. 8) {
+        double[Tuple!size_t] alphas;
+        foreach( s; medset) {
+            alphas[s] = uniform(1.1, 5);
+        }
+        DirichletDistribution!size_t scaleTest = new DirichletDistribution!(size_t)(alphas, medset, false);
+
+        auto originalmean = scaleTest.mean();
+        auto originalmode = scaleTest.mode();
+        auto originalKLD = originalmean.KLD(originalmode);
+        
+        scaleTest.scale(scaleTest.alpha_sum() * uniform(1, pow(2, scale)), 0);
+
+        auto scaledmean = scaleTest.mean();
+        auto scaledmode = scaleTest.mode();
+        auto scaledKLD = scaledmean.KLD(scaledmode);
+        
+        assert (scaledKLD < originalKLD || approxEqual(scaledKLD, originalKLD), "Higher scale did not make mode approach mean " ~ to!string(scaleTest) ~ " originalmean " ~ to!string(originalmean) ~ " scaledmode " ~ to!string(scaledmode) ~ " " ~ to!string(originalKLD) ~ " " ~ to!string(scaledKLD));
+
+    }
+        
 }
