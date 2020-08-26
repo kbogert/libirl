@@ -47,7 +47,7 @@ class PartialObservabilityIRL_Shervin  : Sequence_MaxEnt_Problem!(State, Action,
         this.underlying_solver = solver;
     }
 
-    public double [] solve (Sequence!(Distribution!(State, Action, Observation)) [] trajectories, bool stochasticGradientDescent = true) {
+    public double [] solve (Sequence!(Distribution!(State, Action, Observation)) [] trajectories) {
 
         // convert the trajectories from Pr(S, A, o) => Pr(S, A)
 
@@ -67,7 +67,7 @@ class PartialObservabilityIRL_Shervin  : Sequence_MaxEnt_Problem!(State, Action,
             
         }
         
-        return underlying_solver.solve(reduced_trajectories, stochasticGradientDescent);
+        return underlying_solver.solve(reduced_trajectories);
     }
     
 }
