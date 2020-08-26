@@ -118,7 +118,7 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
     }
     double err_diff = double.infinity;
 
-    while (iterations < max_iter && err_diff > err) {
+    while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
 
         double [] m_t = z_prev.dup;
 
@@ -139,8 +139,9 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         }
 
         double [] z_t = ff(actual_weights, t);
-        
-//        writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
+import std.stdio;        
+writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
+
         z_t[] -= expert_features[t][];
             
         if (usePathLengthBounds) {
@@ -176,6 +177,91 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         
     return w_prev;
 }
+
+
+
+
+double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
+//    import std.stdio;
+
+    double [] beta = new double[expert_features.length * 2];
+    beta[0..(beta.length / 2)] = - log(beta.length / 2 );
+    beta[beta.length/2 .. $] = - log(beta.length );   
+    
+
+    double [] z_prev = new double [beta.length / 2];
+    z_prev[] = 0;
+    double [] w_prev = new double [beta.length / 2];
+    w_prev[] = 0;
+
+    size_t t = 0;
+    size_t iterations = 0;
+    double[][] moving_average_data;
+    size_t moving_average_counter = 0;
+    double [] err_moving_averages = new double[moving_average_length];
+    foreach (ref e ; err_moving_averages) {
+       e = double.max;
+    }
+    double err_diff = double.infinity;
+
+    while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
+
+        double [] m_t = z_prev.dup;
+
+        if (! usePathLengthBounds && iterations > 0)
+            m_t[] /= iterations;
+
+        double [] weights = new double[beta.length];
+        foreach (i ; 0 .. (beta.length / 2)) {
+            weights[i] = exp(beta[i] - nu*m_t[i]);
+            weights[i + (beta.length / 2)] = exp(beta[i + (beta.length / 2)] + nu*m_t[i]);
+        }
+
+        // allow for negative weights by interpreting the second half
+        // of the weight vector as negative values
+        double [] actual_weights = new double[beta.length / 2];
+        foreach(i; 0 .. actual_weights.length) {
+            actual_weights[i] = weights[i] - weights[i + actual_weights.length];
+        }
+
+        double [] z_t = ff(actual_weights);
+import std.stdio;        
+writeln(t, ": ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
+
+        z_t[] -= expert_features[];
+            
+        if (usePathLengthBounds) {
+            z_prev = z_t;
+        } else {
+            z_prev[] += z_t[];
+        }
+
+
+        foreach(i; 0..(beta.length / 2)) {
+            beta[i] = beta[i] - nu*z_t[i] - nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
+            beta[i + (beta.length / 2)] = beta[i + (beta.length / 2)] + nu*z_t[i] + nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
+        }	
+
+
+//        t ++;
+ //       t %= expert_features.length;
+        iterations ++;
+//        if (t == 0) {
+            nu /= 1.01;
+            err_moving_averages[moving_average_counter] = l1norm(z_t);
+            moving_average_counter ++;
+            moving_average_counter %= moving_average_length;
+            err_diff = stddev(err_moving_averages);
+            writeln(err_moving_averages, " ", err_diff);
+//            writeln(err_diff);
+//            writeln(abs_diff_average(err_moving_averages));
+//        }
+        w_prev = actual_weights;   
+    }
+        
+    return w_prev;
+}
+
 
 
 Sequence!(Distribution!(T)) SequenceMarkovChainSmoother(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state) {
