@@ -358,7 +358,7 @@ writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures
 
             auto expert_fe = feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize());
 
-            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 1, tol, 1000, & Gradient, false);
+            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 1, tol, 50, & Gradient, false);
 //            returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & Gradient);
         }            
         return returnval;
@@ -602,8 +602,8 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
 
 class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
 
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights) {
-        super(m, lw, tolerance, true_weights);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true) {
+        super(m, lw, tolerance, true_weights, stochasticGradientDescent);
     }
     
     override Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {

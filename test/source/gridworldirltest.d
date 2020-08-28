@@ -139,9 +139,9 @@ unittest {
 
         // Perform MaxEntIrl
 
-        auto maxEntIRL = new MaxEntIRL_Ziebart_exact(model, lr, tolerance, weights);
+        auto maxEntIRL = new MaxEntIRL_Ziebart_exact(model, lr, tolerance, weights, iter % 2 == 0);// alternate solvers
         
-        double [] found_weights = maxEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
+        double [] found_weights = maxEntIRL.solve (traj_to_traj_distr(trajectories, model)); 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
 
@@ -263,9 +263,9 @@ unittest {
 
         // Perform MaxCausalEntIrl
 
-        auto maxCausalEntIRL = new MaxCausalEntIRL_Ziebart(model, lr, tolerance, weights);
+        auto maxCausalEntIRL = new MaxCausalEntIRL_Ziebart(model, lr, tolerance, weights, iter % 2 == 0);  // alternate solvers
         
-        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
+        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
@@ -388,10 +388,9 @@ unittest {
 
         // Perform MaxCausalEntIrl_Inf
 
-        auto maxCausalEntIRL = new MaxCausalEntIRL_InfMDP(model, lr, tolerance, weights);
+        auto maxCausalEntIRL = new MaxCausalEntIRL_InfMDP(model, lr, tolerance, weights, iter % 2 == 0);// alternate solvers
         
-        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
-
+        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model)); 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
 
@@ -401,9 +400,9 @@ unittest {
 
         // Perform MaxCausalEntIrl_Approx
         
-        maxCausalEntIRL = new MaxCausalEntIRL_SGDApprox(model, lr, tolerance, weights);
+        maxCausalEntIRL = new MaxCausalEntIRL_SGDApprox(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
         
-        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
+        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
 
 
         err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
@@ -414,9 +413,9 @@ unittest {
 
         // Perform MaxCausalEntIrl_Empirical
         
-        maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights);
+        maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
         
-        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), iter % 2 == 0); // alternate solvers
+        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
 
 
         err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
