@@ -1966,12 +1966,39 @@ class DirichletDistribution (PARAMS ...) {
         
     }
 
+    public void interpolateAlphas(double [Tuple!(PARAMS)] newVals, double otherPercent) {
+        double [Tuple!(PARAMS)] tempVals;
+
+        foreach (entry; space) {
+
+            double a = 0.0;
+            double b = 0.0;
+            double * p;
+
+            p = entry in alphas;
+            if (p !is null)
+                a = *p;
+            p = entry in newVals;
+            if (p !is null)
+                b = *p;
+
+            tempVals[entry] = ((1.0 - otherPercent) * a) + (otherPercent * b);
+        }
+
+        setAlphas(tempVals);
+        
+    }
+
     public double alpha_sum() {
         return sumAlphas;
     }
 
     override string toString() {
-        return to!string(alphas);
+        string returnval = "";
+        foreach (k, v; alphas) {
+            returnval ~= to!string(k[0]) ~ " => " ~ to!string(v) ~ ", ";
+        }
+        return returnval;
     }
 }
 
