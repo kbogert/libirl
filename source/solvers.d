@@ -225,8 +225,8 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
         }
 
         double [] z_t = ff(actual_weights);
-import std.stdio;        
-writeln(t, ": ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
+//import std.stdio;        
+//writeln(t, ": ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
 
         z_t[] -= expert_features[];
             
@@ -252,7 +252,7 @@ writeln(t, ": ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", a
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             err_diff = stddev(err_moving_averages);
-            writeln(err_moving_averages, " ", err_diff);
+//            writeln(err_moving_averages, " ", err_diff);
 //            writeln(err_diff);
 //            writeln(abs_diff_average(err_moving_averages));
 //        }
