@@ -136,7 +136,7 @@ public ConditionalDistribution!(Action, State) to_stochastic_policy(Function!(Tu
         return returnval;    
 }
 
-public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Action, State) stochastic_policy, int timesteps, Distribution!(State) initialStates) {
+public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Action, State) stochastic_policy, int timesteps, Distribution!(State) initialStates, bool infinite_terminals = false) {
 
     auto s = initialStates.sample();
 
@@ -147,6 +147,12 @@ public Sequence!(State, Action) simulate(Model m, ConditionalDistribution!(Actio
     while (cur_timestep < timesteps) {
 
         if (s[0].isTerminal()) {
+            if (infinite_terminals) {
+                // simulates an agent permanently stuck in a state for the remaining timesteps
+                returnval[cur_timestep] = tuple!(State, Action)(s[0], stochastic_policy[s].sample()[0]);
+                cur_timestep ++;
+                continue;
+            }
 
             returnval[cur_timestep] = tuple!(State, Action)(s[0], null);
             returnval.setLength(cur_timestep + 1);
@@ -703,6 +709,7 @@ Function!(double, State) stateVisitationFrequency(Model m, Function!(Tuple!(Acti
 
     Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
     Function!(double, State) mu_next = mu_prev;
+    Function!(double, State) returnval = mu_next;
 
     auto T = m.T().flatten().reverse_params();
     
@@ -712,13 +719,175 @@ Function!(double, State) stateVisitationFrequency(Model m, Function!(Tuple!(Acti
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
 
         mu_next = m.initialStateDistribution() + m.gamma() * sumout!(State)( T * mu_prev ).apply(policy) ;
-
+        returnval = returnval + mu_next;
+        
         diff = max ( mu_next - mu_prev ); 
+        mu_prev = mu_next;
+        iter ++;
+    }
+
+    return returnval;    
+
+}
+
+// for sub-rational agents
+
+Function!(double, State, Action) stateActionVisitationFrequencyFinite(Model m, ConditionalDistribution!(Action, State)  policy, double tolerance, int horizon) {
+    auto state_freq = stateVisitationFrequencyFinite(m, policy, tolerance, horizon);
+            
+    Function!(double, State, Action) returnval = new Function!(double, State, Action)(m.S().cartesian_product(m.A()), 0.0);
+
+    foreach (s; m.S()) {
+        foreach(a; m.A()) {
+
+            returnval[ s[0], a[0] ] = state_freq[s[0]] * policy[s][a];
+        }
+    }
+    
+    return returnval;
+}
+
+
+Function!(double, State, Action) stateActionVisitationFrequency(Model m, ConditionalDistribution!(Action, State)  policy, double tolerance, double gamma, int max_iter = int.max) {
+    
+    auto state_freq = stateVisitationFrequency(m, policy, tolerance, max_iter);
+            
+    Function!(double, State, Action) returnval = new Function!(double, State, Action)(m.S().cartesian_product(m.A()), 0.0);
+
+    foreach (s; m.S()) {
+        foreach(a; m.A()) {
+
+            returnval[ s[0], a[0] ] = state_freq[s[0]] * policy[s][a];
+        }
+    }
+    
+    return returnval;
+}
+
+// for finite horizon
+
+Function!(double, State) stateVisitationFrequencyFinite(Model m, ConditionalDistribution!(Action, State) policy, double tolerance, int horizon) {
+
+    return stateVisitationFrequency(m, policy, tolerance, 1.0, horizon);
+}
+
+// for infinite horizon
+
+Function!(double, State) stateVisitationFrequency(Model m, ConditionalDistribution!(Action, State) policy, double tolerance, int max_iter = int.max) {
+    return stateVisitationFrequency(m, policy, tolerance, m.gamma(), max_iter);
+}
+
+
+
+Function!(double, State) stateVisitationFrequency(Model m, ConditionalDistribution!(Action, State) policy, double tolerance, double gamma, int max_iter) {
+
+    Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+    Function!(double, State) returnval = mu_prev;
+
+    foreach (t; 1 .. max_iter) {
+
+        Function!(double, State) mu_next = new Function!(double, State)(m.S(), 0.0);
+        foreach (s; m.S()) {
+
+            double temp = 0;
+        
+            foreach (a; m.A()) {
+
+                foreach (s_p; m.S()) {
+
+                    temp += mu_prev[s_p] * policy[s_p][a] * m.T()[tuple(s_p[0], a[0])][s];
+
+                }
+            }
+            mu_next[s] = temp;
+        
+        }
+        returnval = returnval + mu_next;
+        import std.stdio;
+        writeln(t, " => ", sumout(returnval));
         mu_prev = mu_next;
     }
 
-    return mu_next;    
+    return returnval;
+    
+    /*
+    Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+    Function!(double, State) mu_next = mu_prev;
+    Function!(double, State) returnval = mu_next;
 
+    auto T = m.T().flatten().reverse_params();
+    auto flat_policy = policy.flatten();
+
+        
+    double diff = max( mu_prev );
+    int iter = 0;
+
+    while (diff > tolerance*(1 - gamma) / gamma && iter < max_iter) {
+
+        mu_next = gamma * sumout!(Action)(sumout!(State)( T * (flat_policy.reverse_params() * mu_prev))) ;
+        returnval = mu_next + returnval;
+        import std.stdio;
+        writeln(iter, " => ", sumout(mu_next));
+        
+        diff = max ( mu_next - mu_prev ); 
+        mu_prev = mu_next;
+        iter ++;
+    }
+
+    return returnval;  */
+}
+
+Function!(double, State, Action) [] stateActionVisitationFrequencyPerTimestep(Model m, ConditionalDistribution!(Action, State)  policy, int horizon) {
+    auto state_freq = stateVisitationFrequencyPerTimestep(m, policy, horizon);
+            
+    Function!(double, State, Action) [] returnval;
+
+    foreach(t; 0 .. state_freq.length) {
+        auto temp = new Function!(double, State, Action)(m.S().cartesian_product(m.A()), 0.0);
+
+        foreach (s; m.S()) {
+            foreach(a; m.A()) {
+
+                temp[ s[0], a[0] ] = state_freq[t][s[0]] * policy[s][a];
+            }
+        }
+        returnval ~= temp;
+    }
+    
+    return returnval;
+}
+
+Function!(double, State)[] stateVisitationFrequencyPerTimestep(Model m, ConditionalDistribution!(Action, State) policy,  int horizon) {
+
+    Function!(double, State) mu_prev = new Function!(double, State)(m.initialStateDistribution());
+    Function!(double, State) [] returnval;
+    returnval ~= mu_prev;
+
+    foreach (t; 1 .. horizon) {
+
+        Function!(double, State) mu_next = new Function!(double, State)(m.S(), 0.0);
+        foreach (s; m.S()) {
+
+            double temp = 0;
+        
+            foreach (a; m.A()) {
+
+                foreach (s_p; m.S()) {
+
+                    temp += mu_prev[s_p] * policy[s_p][a] * m.T()[tuple(s_p[0], a[0])][s];
+
+                }
+            }
+            mu_next[s] = temp;
+        
+        }
+        returnval ~= mu_next;
+
+        mu_prev = mu_next;
+    }
+
+    return returnval;
+    
 }
 
 /*
