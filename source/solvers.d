@@ -226,7 +226,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
         double [] z_t = ff(actual_weights);
 //import std.stdio;        
-//writeln(t, ": ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
+//writeln(iterations, ": ", nu, ", ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
 
         z_t[] -= expert_features[];
             

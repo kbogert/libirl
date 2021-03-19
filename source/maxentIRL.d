@@ -339,6 +339,8 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
         // convert trajectories into an array of features
 
 import std.stdio;
+writeln();
+writeln("Empirical Feature expectations");
 writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize()));
 
 
@@ -353,12 +355,12 @@ writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures
                         
             returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & GradientForTimestep, true);
         } else {
-            // normalize initial weights
-            returnval[] /= l1norm(returnval);
 
             auto expert_fe = feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize());
 
-            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 1, tol, 50, & Gradient, false);
+            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 0.28, tol, 50, & Gradient, true);
+//            // normalize initial weights
+//            returnval[] /= l1norm(returnval);
 //            returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & Gradient);
         }            
         return returnval;

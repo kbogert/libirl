@@ -1128,6 +1128,7 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
         debug {
             import std.conv;
             throw new Exception("Didn't find a key to sample, ended at: " ~ to!string(mass) ~ " but wanted " ~ to!string(rand));
+            assert(0);
         } else {
             return keys[$-1];
         }
