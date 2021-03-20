@@ -352,7 +352,6 @@ unittest {
         
 }
 
-/*
 @name("State Visitation Frequency test")
 unittest {
 
@@ -361,7 +360,9 @@ unittest {
     double gamma = 0.95;
     double value_error = 0.001;
     double idealStateTransitionProb = .90;
-
+    size_t numTrajectories = 30000;
+    int trajLength = 2 * cast(int)ceil(log(value_error) / log(gamma));
+    
     auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
     auto optimal_action = new GridWorldAction(1, 0) ;    
 
@@ -380,41 +381,66 @@ unittest {
 
     assert( transitions[ tuple(cast(State)new GridWorldState(3, 3), cast(Action)new GridWorldAction(1, 0)) ][new GridWorldState(4,3)] == idealStateTransitionProb, "Transition function not constructed correctly");
 
-    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
+    auto model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error);
 
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
     auto pi = optimum_policy(V, model);
 
-    
-    auto mu1 = stateVisitationFrequency(model, pi, value_error);
-    auto mu2 = stateVisitationFrequencyTest(model, pi, value_error);
+    // find empirical state visitation frequency
 
-    foreach (s; model.S()) {
-        assert (approxEqual(mu1[s[0]], mu2[s[0]], value_error), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2));
-    }    
+    Function!(double, State) mu2 = new Function!(double, State)(model.S(), 0.0);
+
+    foreach(i; 0 .. numTrajectories) {
+
+        auto traj = simulate(model, to_stochastic_policy(pi, model.A()), trajLength, model.initialStateDistribution(), true );
+
+        auto g = 1.0;
         
-    version(fullunittest) {
-    
-        // increase accuracy (decrease error)
+        foreach(timestep; traj) {
 
-        gamma = 0.99;
-        value_error = 0.0001;
-
-        model = new BasicModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform));
-        V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
-
-        pi = optimum_policy(V, model);
-
-    
-        mu1 = stateVisitationFrequency(model, pi, value_error);
-        mu2 = stateVisitationFrequencyTest(model, pi, value_error);
-
-        foreach (s; model.S()) {
-            assert (approxEqual(mu1[s[0]], mu2[s[0]], value_error), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2));
+            mu2[timestep[0]] += g / numTrajectories;
+            g *= gamma;
         }
     }
+    
+    
+    auto mu1 = stateVisitationFrequency(model, pi, value_error);
+
+    foreach (s; model.S()) {
+        assert (isClose(mu1[s[0]], mu2[s[0]], 0.1), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
+    }    
         
+
+    // test sub-rational cases
+
+
+    auto model2 = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error);
+
+    auto V2 = soft_max_value_iteration(model2, value_error * max ( max( lr.toFunction())) );
+    auto pi2 = soft_max_policy(V2, model2);
+
+    // find empirical state visitation frequency
+
+    mu2 = new Function!(double, State)(model2.S(), 0.0);
+
+    foreach(i; 0 .. numTrajectories) {
+
+        auto traj = simulate(model2, pi2, trajLength, model2.initialStateDistribution(), true );
+
+        auto g = 1.0;
+        
+        foreach(timestep; traj) {
+
+            mu2[timestep[0]] += g / numTrajectories;
+            g *= gamma;
+        }
+    }
+    
+    
+    mu1 = stateVisitationFrequency(model2, pi2, value_error);
+
+    foreach (s; model2.S()) {
+        assert (isClose(mu1[s[0]], mu2[s[0]], 0.1), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
+    }    
+           
 }
-
-*/
-

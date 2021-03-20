@@ -63,3 +63,84 @@ unittest {
     }
 
 }
+
+@name("State Visitation Frequency test")
+unittest {
+
+    foreach (iter; 0 .. 5 ) {
+
+        auto mdpStates = uniform(2, 50);
+        auto mdpActions = uniform(2, 8);
+        auto weight_scale = 2.0;
+        auto gamma = 0.95;
+        auto value_error = 0.1;
+        size_t numTrajectories = 30000;
+        int trajLength = 2 * cast(int)ceil(log(value_error) / log(gamma));
+
+        UniqueFeaturesPerStateActionReward lr;
+
+        auto model = generateRandomMDP(mdpStates, mdpActions, uniform(5, 20), weight_scale, gamma, lr);
+
+
+
+        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
+        auto pi = optimum_policy(V, model);
+
+        // find empirical state visitation frequency
+
+        Function!(double, State) mu2 = new Function!(double, State)(model.S(), 0.0);
+
+        foreach(i; 0 .. numTrajectories) {
+
+            auto traj = simulate(model, to_stochastic_policy(pi, model.A()), trajLength, model.initialStateDistribution(), true );
+
+            auto g = 1.0;
+        
+            foreach(timestep; traj) {
+
+                mu2[timestep[0]] += g / numTrajectories;
+                g *= gamma;
+            }
+        }
+    
+    
+        auto mu1 = stateVisitationFrequency(model, pi, value_error);
+
+        foreach (s; model.S()) {
+            assert (isClose(mu1[s[0]], mu2[s[0]], 0.19), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
+        }    
+        
+
+        // test sub-rational cases
+
+        auto V2 = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) );
+        auto pi2 = soft_max_policy(V2, model);
+
+        // find empirical state visitation frequency
+
+        mu2 = new Function!(double, State)(model.S(), 0.0);
+
+        foreach(i; 0 .. numTrajectories) {
+
+            auto traj = simulate(model, pi2, trajLength, model.initialStateDistribution(), true );
+
+            auto g = 1.0;
+        
+            foreach(timestep; traj) {
+
+                mu2[timestep[0]] += g / numTrajectories;
+                g *= gamma;
+            }
+        }
+    
+    
+        mu1 = stateVisitationFrequency(model, pi2, value_error);
+
+        foreach (s; model.S()) {
+            assert (isClose(mu1[s[0]], mu2[s[0]], 0.19), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
+        }    
+
+    }
+    
+}
+
