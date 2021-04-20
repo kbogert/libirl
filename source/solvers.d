@@ -396,12 +396,20 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
 
 Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(ConditionalDistribution!(T, T)) proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
 
+
     double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
 
     Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
     foreach(t ; 0 .. observations.length) {
         returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
 
+        // validate proposal distribution
+
+        foreach (T1; observations[t][0].param_set()) {
+            if (proposal_distributions[t][0][T1].entropy() == 0.0) {
+                throw new Exception("Proposal distribution cannot have zero entropy, at least two tokens must have non-zero probability.");
+            }
+        }            
     }    
     
     Sequence!(T) currentState = new Sequence!(T)(observations.length);
@@ -441,7 +449,7 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
 
         Tuple!T newSample;
         do {
-            newSample =proposal_distributions[position][0][currentState[position]].sample();
+            newSample = proposal_distributions[position][0][currentState[position]].sample();
         } while (newSample == currentState[position]);
        
         double newSampleProb;
