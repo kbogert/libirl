@@ -1,0 +1,13 @@
+{
+	"dependencies": {
+		"dyaml": "~>0.8.3",
+		"libirl": {
+			"path": "..",
+			"version": "~master"
+		}
+	},
+	"name": "hiddendataem",
+	"targetName": "hiddendataem",
+	"targetPath": "bin",
+	"targetType": "executable"
+}

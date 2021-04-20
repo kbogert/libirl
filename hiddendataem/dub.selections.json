@@ -1,0 +1,8 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"dyaml": "0.8.3",
+		"libirl": {"path":".."},
+		"tinyendian": "0.2.0"
+	}
+}
