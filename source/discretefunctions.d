@@ -1779,7 +1779,7 @@ class ExponentialDistribution(PARAMS...) {
             
 }
 
-Distribution!(T) set_to_uniform_probability(T)(Set!T input_set, Set!T full_set) {
+Distribution!(T) set_to_uniform_probability(T...)(Set!T input_set, Set!T full_set) {
 
     Distribution!(T) returnval = new Distribution!T(full_set, 0.0);
 

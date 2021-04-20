@@ -389,7 +389,13 @@ class GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr: MCMCPartialTra
 
     protected override Sequence!(Distribution!(State, Action)) call_solver(Sequence!(Distribution!(Tuple!(State, Action))) observations, ConditionalDistribution!(Tuple!(State, Action), Tuple!(State, Action)) transitions, Distribution!(Tuple!(State, Action)) initial_state, size_t traj_num) {
 
-        auto temp_sequence = MarkovGibbsSampler!(Tuple!(State, Action))(observations, transitions, initial_state, burn_in_samples, num_samples);
+
+        bool delegate(Sequence!(Distribution!(Tuple!(State, Action))) current, size_t iteration) temp_delegate = null;
+
+        if (convergence_check_user ! is null)
+            temp_delegate = &convergence_check;
+
+        auto temp_sequence = MarkovGibbsSampler!(Tuple!(State, Action))(observations, transitions, initial_state, burn_in_samples, num_samples, temp_delegate);
         auto results = new Sequence!(Distribution!(State, Action))(temp_sequence.length);
 
         foreach (t, timestep; temp_sequence) {

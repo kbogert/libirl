@@ -359,7 +359,7 @@ unittest {
         auto arr = new Sequence!(State, Action)[10];
         foreach(j; 0 .. arr.length) {
             arr[j] = simulate(model, model.getPolicy(), uniform(15, 20), model.initialStateDistribution());
-            arr[j] = removeOccludedTimesteps(arr[0], occluded_states);
+            arr[j] = removeOccludedTimesteps(arr[j], occluded_states);
         }
 
         auto M_step = new MaxCausalEntIRL_InfMDP(model, lr, 0.1, lr.getWeights());
