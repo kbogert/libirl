@@ -337,12 +337,12 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
                 max_traj_length = t.length();
 
         // convert trajectories into an array of features
-
+/*
 import std.stdio;
 writeln();
 writeln("Empirical Feature expectations");
 writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize()));
-
+*/
 
         
         if (stochasticGradientDescent) {
@@ -640,12 +640,14 @@ class LME_IRL (T ...) {
     protected Sequence_Distribution_Computer!(T) E;
     protected double tolerance;
     protected double max_iter;
-
-    public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double EM_tolerance, size_t EM_max_iter) {
+    protected bool debug_output;
+    
+    public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double EM_tolerance, size_t EM_max_iter, bool debug_output = false) {
         this.M = M;
         this.E = E;
         this.tolerance = EM_tolerance;
         this.max_iter = EM_max_iter;
+        this.debug_output = debug_output;
     }
 
 
@@ -669,7 +671,11 @@ class LME_IRL (T ...) {
             iters ++;
             
             weights = new_weights;
-            
+
+            if (debug_output) {
+                import std.stdio;
+                writeln("Iteration ", iters, " Weights ", new_weights);
+            }
         } while (iters < max_iter && should_continue);
 
         return weights;
