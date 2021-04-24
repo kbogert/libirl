@@ -160,7 +160,7 @@ unittest {
         foreach (a; model.A()) {
             foreach(t; 0 .. arr[0].length) {
 
-                assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
+                assert(isClose(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])], 0.01, 1e-5), "Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
             }
         }
     }
@@ -186,7 +186,7 @@ unittest {
         foreach (a; model.A()) {
             foreach(t; 0 .. arr[0].length) {
 
-                assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "2 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
+                assert(isClose(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])], 0.01, 1e-5), "2 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
             }
         }
     }
@@ -216,7 +216,7 @@ unittest {
             foreach (a; model.A()) {
                 foreach(t; 0 .. arr[0].length) {
 
-                    assert(approxEqual(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])]), "3 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
+                    assert(isClose(distr[0][t][0][tuple(s[0], a[0])], controlDistr[0][t][0][tuple(s[0], a[0])], 0.01, 1e-5), "3 - Trajectory calc failed to match control, calc: " ~ to!string(distr) ~ " control: " ~ to!string(controlDistr)); 
                 }
             }
         }

@@ -73,9 +73,9 @@ unittest {
         auto mdpActions = uniform(2, 8);
         auto weight_scale = 2.0;
         auto gamma = 0.95;
-        auto value_error = 0.1;
-        size_t numTrajectories = 30000;
-        int trajLength = 2 * cast(int)ceil(log(value_error) / log(gamma));
+        auto value_error = 0.01;
+        size_t numTrajectories = 2000*mdpStates*mdpActions;
+        int trajLength = cast(int)ceil(log(value_error / 2) / log(gamma));
 
         UniqueFeaturesPerStateActionReward lr;
 
@@ -107,7 +107,7 @@ unittest {
         auto mu1 = stateVisitationFrequency(model, pi, value_error);
 
         foreach (s; model.S()) {
-            assert (isClose(mu1[s[0]], mu2[s[0]], 0.19), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
+            assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
         }    
         
 
@@ -137,7 +137,7 @@ unittest {
         mu1 = stateVisitationFrequency(model, pi2, value_error);
 
         foreach (s; model.S()) {
-            assert (isClose(mu1[s[0]], mu2[s[0]], 0.19), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
+            assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " " ~ to!string(s[0]));
         }    
 
     }

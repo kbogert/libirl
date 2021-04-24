@@ -60,11 +60,11 @@ unittest {
     
     auto results = SequenceMarkovChainSmoother!(size_t)(observations, transitions, initial);
 
-    assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1");
-    assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2");
-    assert(approxEqual(results[2][0][tuple(1UL)], 0.3075), "Markov Smoother 3");    
-    assert(approxEqual(results[3][0][tuple(1UL)], 0.8204), "Markov Smoother 4");
-    assert(approxEqual(results[4][0][tuple(1UL)], 0.8637), "Markov Smoother 5");
+    assert(isClose(results[0][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 1");
+    assert(isClose(results[1][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 2");
+    assert(isClose(results[2][0][tuple(1UL)], 0.3075, 0.01, 1e-5), "Markov Smoother 3");    
+    assert(isClose(results[3][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 4");
+    assert(isClose(results[4][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 5");
 
     assert(results[0][0].isNormalized(), "Not Normalized");
     assert(results[1][0].isNormalized(), "Not Normalized");
@@ -129,11 +129,11 @@ unittest {
     foreach (i; 0 .. 10) {
         auto results = MarkovGibbsSampler!(size_t)(observations, transitions, initial, 10000, 1500000);
 
-        assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
-        assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
-        assert(approxEqual(results[2][0][tuple(1UL)], 0.3075), "Markov Smoother 3 " ~ to!string(results[2][0][tuple(1UL)]));    
-        assert(approxEqual(results[3][0][tuple(1UL)], 0.8204), "Markov Smoother 4 " ~ to!string(results[3][0][tuple(1UL)]));
-        assert(approxEqual(results[4][0][tuple(1UL)], 0.8637), "Markov Smoother 5 " ~ to!string(results[4][0][tuple(1UL)]));
+        assert(isClose(results[0][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
+        assert(isClose(results[1][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
+        assert(isClose(results[2][0][tuple(1UL)], 0.3075, 0.01, 1e-5), "Markov Smoother 3 " ~ to!string(results[2][0][tuple(1UL)]));    
+        assert(isClose(results[3][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 4 " ~ to!string(results[3][0][tuple(1UL)]));
+        assert(isClose(results[4][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 5 " ~ to!string(results[4][0][tuple(1UL)]));
 
         assert(results[0][0].isNormalized(), "Not Normalized");
         assert(results[1][0].isNormalized(), "Not Normalized");
@@ -206,11 +206,11 @@ unittest {
     foreach (i; 0 .. 10) {
         auto results = HybridMCMC!(size_t)(observations, transitions, initial, proposal, 10000, 2500000);
 
-        assert(approxEqual(results[0][0][tuple(1UL)], 0.8637), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
-        assert(approxEqual(results[1][0][tuple(1UL)], 0.8204), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
-        assert(approxEqual(results[2][0][tuple(1UL)], 0.3075), "Markov Smoother 3 " ~ to!string(results[2][0][tuple(1UL)]));    
-        assert(approxEqual(results[3][0][tuple(1UL)], 0.8204), "Markov Smoother 4 " ~ to!string(results[3][0][tuple(1UL)]));
-        assert(approxEqual(results[4][0][tuple(1UL)], 0.8637), "Markov Smoother 5 " ~ to!string(results[4][0][tuple(1UL)]));
+        assert(isClose(results[0][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 1 " ~ to!string(results[0][0][tuple(1UL)]));
+        assert(isClose(results[1][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 2 " ~ to!string(results[1][0][tuple(1UL)]));
+        assert(isClose(results[2][0][tuple(1UL)], 0.3075, 0.01, 1e-5), "Markov Smoother 3 " ~ to!string(results[2][0][tuple(1UL)]));    
+        assert(isClose(results[3][0][tuple(1UL)], 0.8204, 0.01, 1e-5), "Markov Smoother 4 " ~ to!string(results[3][0][tuple(1UL)]));
+        assert(isClose(results[4][0][tuple(1UL)], 0.8637, 0.01, 1e-5), "Markov Smoother 5 " ~ to!string(results[4][0][tuple(1UL)]));
 
         assert(results[0][0].isNormalized(), "Not Normalized");
         assert(results[1][0].isNormalized(), "Not Normalized");

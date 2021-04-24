@@ -914,7 +914,7 @@ unittest {
         auto scaledmode = scaleTest.mode();
         auto scaledKLD = scaledmean.KLD(scaledmode);
         
-        assert (scaledKLD < originalKLD || approxEqual(scaledKLD, originalKLD), "Higher scale did not make mode approach mean " ~ to!string(scaleTest) ~ " originalmean " ~ to!string(originalmean) ~ " scaledmode " ~ to!string(scaledmode) ~ " " ~ to!string(originalKLD) ~ " " ~ to!string(scaledKLD));
+        assert (scaledKLD < originalKLD || isClose(scaledKLD, originalKLD, 0.01, 1e-5), "Higher scale did not make mode approach mean " ~ to!string(scaleTest) ~ " originalmean " ~ to!string(originalmean) ~ " scaledmode " ~ to!string(scaledmode) ~ " " ~ to!string(originalKLD) ~ " " ~ to!string(scaledKLD));
 
     }
         

@@ -360,8 +360,8 @@ unittest {
     double gamma = 0.95;
     double value_error = 0.001;
     double idealStateTransitionProb = .90;
-    size_t numTrajectories = 30000;
-    int trajLength = 2 * cast(int)ceil(log(value_error) / log(gamma));
+    size_t numTrajectories = 100000;
+    int trajLength = cast(int)ceil(log(value_error / 2) / log(gamma));
     
     auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
     auto optimal_action = new GridWorldAction(1, 0) ;    
@@ -407,7 +407,7 @@ unittest {
     auto mu1 = stateVisitationFrequency(model, pi, value_error);
 
     foreach (s; model.S()) {
-        assert (isClose(mu1[s[0]], mu2[s[0]], 0.1), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
+        assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
     }    
         
 
@@ -440,7 +440,7 @@ unittest {
     mu1 = stateVisitationFrequency(model2, pi2, value_error);
 
     foreach (s; model2.S()) {
-        assert (isClose(mu1[s[0]], mu2[s[0]], 0.1), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
+        assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
     }    
            
 }
