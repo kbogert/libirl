@@ -311,7 +311,7 @@ void main(string[] args) {
         E_step = new ExactPartialTrajectoryToTrajectoryDistr(model, reward);
         break;
     case EStepType.gibbs:
-        E_step = new GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr(model, reward, MCMCRepeats, burnInSamples, totalMCMCSamples);
+        E_step = new GibbsSamplingApproximatePartialTrajectoryToTrajectoryDistr(model, reward, MCMCRepeats, burnInSamples, totalMCMCSamples, null, true, debugOn);
         break;
     case EStepType.hybrid:
 
@@ -329,7 +329,7 @@ void main(string[] args) {
             }
         }
         
-        E_step = new HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr(model, reward, MCMCRepeats, burnInSamples, totalMCMCSamples, uniformProposal);
+        E_step = new HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr(model, reward, MCMCRepeats, burnInSamples, totalMCMCSamples, uniformProposal, null, true, debugOn);
         break;
     }
         

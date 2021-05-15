@@ -139,10 +139,10 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         }
 
         double [] z_t = ff(actual_weights, t);
-        if (debugOn) {
-            import std.stdio;        
-            writeln(t, ": ", z_t, " vs ", expert_features[t], " weights: ", actual_weights);
-        }
+//        if (debugOn) {
+//            import std.stdio;        
+//            writeln(t, ": ", z_t, " vs ", expert_features[t], " weights: ", actual_weights);
+//        }
         
         z_t[] -= expert_features[t][];
             
@@ -169,9 +169,11 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
             moving_average_counter %= moving_average_length;
             moving_average_data.length = 0;
             err_diff = stddev(err_moving_averages);
-//            writeln(err_moving_averages);
-//            writeln(err_diff);
-//            writeln(abs_diff_average(err_moving_averages));
+            if (debugOn) {
+                import std.stdio;
+                writeln("SGD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+//               writeln(abs_diff_average(err_moving_averages));
+            }
         }
         moving_average_data ~= z_t.dup;
         w_prev = actual_weights;   
@@ -257,6 +259,11 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             err_diff = stddev(err_moving_averages);
+            if (debugOn) {
+                import std.stdio;
+                writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+//               writeln(abs_diff_average(err_moving_averages));
+            }
 //            writeln(err_moving_averages, " ", err_diff);
 //            writeln(err_diff);
 //            writeln(abs_diff_average(err_moving_averages));
@@ -311,7 +318,7 @@ Sequence!(Distribution!(T)) SequenceMarkovChainSmoother(T)(Sequence!(Distributio
 }
 
 
-Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
+Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null, bool debugOn = false) {
 
     double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
 
@@ -386,6 +393,12 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
             if (convergence_check ! is null && 
                 convergence_check(returnval, i - burn_in_samples))
                 break;
+            if (debugOn) {
+                import std.stdio;
+
+                write("\r", "GibbsMCMC: ", (cast(double)i) / (burn_in_samples + total_samples) * 100, "%");
+
+            }
         }
         currentState[position] = newSample;
     }
@@ -394,12 +407,16 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
         entry[0].normalize();
     }    
 
+    if (debugOn) {
+        import std.stdio;
+        writeln();
+    }
 
     return returnval;
 }
 
 
-Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(ConditionalDistribution!(T, T)) proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null) {
+Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state, Sequence!(ConditionalDistribution!(T, T)) proposal_distributions, size_t burn_in_samples, size_t total_samples, const bool delegate(Sequence!(Distribution!(T)) , size_t) convergence_check = null, bool debugOn = false) {
 
 
     double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
@@ -484,6 +501,13 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
             if (convergence_check ! is null && 
                     convergence_check(returnval, i - burn_in_samples))
                 break;
+
+            if (debugOn) {
+                import std.stdio;
+
+                write("\r", "HybridMCMC: ", (cast(double)i) / (burn_in_samples + total_samples) * 100, "%");
+
+            }
         }
 
     }
@@ -492,7 +516,10 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
         entry[0].normalize();
     }    
 
-
+    if (debugOn) {
+        import std.stdio;
+        writeln();
+    }
     return returnval;
 }
 
