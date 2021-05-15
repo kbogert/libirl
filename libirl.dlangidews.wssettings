@@ -1,48 +1,42 @@
 {
     "startupProject": "libirl:libirl-test",
-    "expandedItems": [
-        "/home/kbogert/Documents/libirl/test/source",
-        "/home/kbogert/workspace/libirl/dub.json",
-        "/home/kbogert/workspace/libirl/source",
-        "/home/kbogert/workspace/libirl/test/source",
-        "/home/kbogert/Documents/libirl/source"
-    ],
-    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/discretefunctions.d",
     "breakpoints": [
     ],
     "bookmarks": [
     ],
     "files": [
         {
+            "file": "/home/kbogert/Documents/libirl/test/source/singletest.d",
+            "column": 58,
+            "row": 27
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/test/source/randommdptest.d",
+            "column": 139,
+            "row": 55
+        },
+        {
             "file": "/home/kbogert/Documents/libirl/source/discretemdp.d",
-            "column": 414,
-            "row": 42
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/test/source/gridworldirltest.d",
-            "column": 41,
-            "row": 53
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/source/maxentIRL.d",
-            "column": 14,
-            "row": 2
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/source/discretefunctions.d",
-            "column": 563,
+            "column": 813,
             "row": 0
         },
         {
-            "file": "/home/kbogert/Documents/libirl/test/../source/discretemdp.d",
-            "column": 414,
-            "row": 45
+            "file": "/home/kbogert/Documents/libirl/source/randommdp.d",
+            "column": 0,
+            "row": 0
         },
         {
-            "file": "/home/kbogert/Documents/libirl/test/../source/discretefunctions.d",
-            "column": 503,
-            "row": 48
+            "file": "/home/kbogert/Documents/libirl/test/source/trajectorytest.d",
+            "column": 218,
+            "row": 122
         }
     ],
+    "expandedItems": [
+        "/home/kbogert/Documents/libirl/source",
+        "/home/kbogert/Documents/libirl/dub.json",
+        "/home/kbogert/Documents/libirl/test/source",
+        "/home/kbogert/Documents/libirl/hiddendataem/source"
+    ],
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/test/source/trajectorytest.d",
     "buildConfiguration": 2
 }

@@ -1,10 +1,11 @@
 {
+    "includePath": {
+    },
     "name": "libirl",
-    "description": " / ",
+    "description": "Inverse Reinforcement Learning Library",
     "projects": {
         "libirl": "dub.json",
-        "libirl:libirl-test": "test/dub.json"
-    },
-    "includePath": {
+        "libirl:libirl-test": "test/dub.json",
+        "hiddendataem": "hiddendataem/dub.json"
     }
 }

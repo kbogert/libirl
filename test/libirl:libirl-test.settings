@@ -3,7 +3,8 @@
         "toolchain": "default",
         "arch": "default",
         "verbose": false,
-        "dub_additional_params": null
+        "dub_additional_params": null,
+        "configuration": "default"
     },
     "debug": {
         "external_console": true,

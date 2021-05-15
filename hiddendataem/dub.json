@@ -9,5 +9,8 @@
 	"name": "hiddendataem",
 	"targetName": "hiddendataem",
 	"targetPath": "bin",
-	"targetType": "executable"
+	"targetType": "executable",
+    "stringImportPaths": ["buildstrings"],    
+    "preGenerateCommands": ["mkdir -p buildstrings", "git log --pretty=format:'%H' -n 1 > buildstrings/gitcommit"], 
+    "postBuildCommands": ["rm -rf buildstrings"]
 }

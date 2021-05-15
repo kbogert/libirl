@@ -312,9 +312,10 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
     protected size_t inference_counter;
     protected Variant inference_cache;
     protected bool stochasticGradientDescent;
+    protected bool debugOn;
         
     protected double [] true_weights;
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true) {
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true, bool debugOn = false) {
         model = m;
         reward = lw;
         tol = tolerance;
@@ -322,6 +323,7 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
         sgd_block_size = 1;
         inference_counter = 0;
         this.stochasticGradientDescent = stochasticGradientDescent;
+        this.debugOn = debugOn;
     }
 
 
@@ -337,13 +339,14 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
                 max_traj_length = t.length();
 
         // convert trajectories into an array of features
-/*
-import std.stdio;
-writeln();
-writeln("Empirical Feature expectations");
-writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize()));
-*/
+        if (debugOn) {
 
+            import std.stdio;
+            writeln();
+            writeln("Empirical Feature expectations");
+            writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize()));
+
+        }
         
         if (stochasticGradientDescent) {
 
@@ -499,8 +502,8 @@ import std.stdio;
 
 class MaxCausalEntIRL_InfMDP : MaxCausalEntIRL_Ziebart {
     
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true) {
-        super(m, lw, tolerance, true_weights, stochasticGradientDescent);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true, bool debugOn = false) {
+        super(m, lw, tolerance, true_weights, stochasticGradientDescent, debugOn);
     }
     
     override ConditionalDistribution!(Action, State) [] inferenceProcedure (double [] weights, size_t T) {
@@ -526,8 +529,8 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
 
     protected Distribution!(State, Action) [] empirical_D_s_a_t;
     
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true) {
-        super(m, lw, tolerance, true_weights, stochasticGradientDescent);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true, bool debugOn = false) {
+        super(m, lw, tolerance, true_weights, stochasticGradientDescent, debugOn);
     }
 
     override public double [] solve (Sequence!(Distribution!(State, Action)) [] trajectories) {
@@ -604,8 +607,8 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
 
 class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
 
-    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true) {
-        super(m, lw, tolerance, true_weights, stochasticGradientDescent);
+    public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true, bool debugOn = false) {
+        super(m, lw, tolerance, true_weights, stochasticGradientDescent, debugOn);
     }
     
     override Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {

@@ -13,6 +13,8 @@ import std.stdio;
 import std.conv;
 import std.typecons;
 
+enum gitcommit = import("gitcommit");
+enum buildTimeStamp = __TIMESTAMP__;
 
 void loadMDP(Node rootNode, double viTol, out Model model, out LinearReward lr) {
 
@@ -228,8 +230,8 @@ void main(string[] args) {
     long burnInSamples = 1000;
     long totalMCMCSamples = 10000;
     size_t MCMCRepeats = 10;
-    enum MStepType { exact, approx, empiricalApprox };
-    enum EStepType { exact, gibbs, hybrid };
+    enum MStepType { exact, approx, empiricalApprox }
+    enum EStepType { exact, gibbs, hybrid }
     MStepType mStep = MStepType.exact;
     EStepType eStep = EStepType.exact;
     
@@ -255,7 +257,7 @@ void main(string[] args) {
 
     if (helpInformation.helpWanted)
     {
-    defaultGetoptPrinter("Run Hidden Data EM on the specified MDP and trajectory files (all assumed to be YAML)",
+    defaultGetoptPrinter("Run Hidden Data EM on the specified MDP and trajectory files (all assumed to be YAML).\n\nBuild date: " ~buildTimeStamp ~ " from commit " ~ gitcommit,
       helpInformation.options);
       return;
     }
@@ -294,13 +296,13 @@ void main(string[] args) {
 
     final switch(mStep) {
     case MStepType.exact:
-        M_step = new MaxCausalEntIRL_InfMDP(model, reward, gdTolerance, reward.getWeights(), useStochasticGD);
+        M_step = new MaxCausalEntIRL_InfMDP(model, reward, gdTolerance, reward.getWeights(), useStochasticGD, debugOn);
         break;
     case MStepType.approx:
-        M_step = new MaxCausalEntIRL_SGDApprox(model, reward, gdTolerance, reward.getWeights(), useStochasticGD);
+        M_step = new MaxCausalEntIRL_SGDApprox(model, reward, gdTolerance, reward.getWeights(), useStochasticGD, debugOn);
         break;
     case MStepType.empiricalApprox:
-        M_step = new MaxCausalEntIRL_SGDEmpirical(model, reward, gdTolerance, reward.getWeights(), useStochasticGD);
+        M_step = new MaxCausalEntIRL_SGDEmpirical(model, reward, gdTolerance, reward.getWeights(), useStochasticGD, debugOn);
         break;
     }
 

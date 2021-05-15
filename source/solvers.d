@@ -95,7 +95,7 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
     return weights;
 }
 
-double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false) {
 //    import std.stdio;
 
     double [] beta = new double[expert_features[0].length * 2];
@@ -139,9 +139,11 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         }
 
         double [] z_t = ff(actual_weights, t);
-//import std.stdio;        
-//writeln(t, ": ", z_t, " => ", expert_features[t], " w: ", weights, " actual_w: ", actual_weights);
-
+        if (debugOn) {
+            import std.stdio;        
+            writeln(t, ": ", z_t, " vs ", expert_features[t], " weights: ", actual_weights);
+        }
+        
         z_t[] -= expert_features[t][];
             
         if (usePathLengthBounds) {
@@ -181,7 +183,7 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
 
 
-double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5) {
+double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false) {
 //    import std.stdio;
 
     double [] beta = new double[expert_features.length * 2];
@@ -225,9 +227,12 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
         }
 
         double [] z_t = ff(actual_weights);
-//import std.stdio;        
-//writeln(iterations, ": ", nu, ", ", z_t, " => ", expert_features, " w: ", weights, " actual_w: ", actual_weights);
 
+        if (debugOn) {
+            import std.stdio;        
+            writeln(iterations, ": ", z_t, " vs ", expert_features, " weights: ", actual_weights);
+        }
+        
         z_t[] -= expert_features[];
             
         if (usePathLengthBounds) {
