@@ -6,29 +6,34 @@
     ],
     "files": [
         {
-            "file": "/home/kbogert/Documents/libirl/test/source/singletest.d",
-            "column": 58,
-            "row": 27
+            "file": "/home/kbogert/Documents/libirl/hiddendataem/source/app.d",
+            "column": 310,
+            "row": 8
         },
         {
-            "file": "/home/kbogert/Documents/libirl/test/source/randommdptest.d",
-            "column": 139,
-            "row": 55
+            "file": "/home/kbogert/Documents/libirl/source/trajectories.d",
+            "column": 189,
+            "row": 14
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/source/solvers.d",
+            "column": 366,
+            "row": 22
+        },
+        {
+            "file": "/home/kbogert/Documents/libirl/source/maxentIRL.d",
+            "column": 591,
+            "row": 73
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/discretemdp.d",
-            "column": 813,
-            "row": 0
+            "column": 603,
+            "row": 27
         },
         {
-            "file": "/home/kbogert/Documents/libirl/source/randommdp.d",
+            "file": "/home/kbogert/Documents/libirl/test/source/gridworld.d",
             "column": 0,
             "row": 0
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/test/source/trajectorytest.d",
-            "column": 218,
-            "row": 122
         }
     ],
     "expandedItems": [
@@ -37,6 +42,6 @@
         "/home/kbogert/Documents/libirl/test/source",
         "/home/kbogert/Documents/libirl/hiddendataem/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/test/source/trajectorytest.d",
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/maxentIRL.d",
     "buildConfiguration": 2
 }

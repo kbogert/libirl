@@ -331,7 +331,10 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
     Sequence!(T) currentState = new Sequence!(T)(observations.length);
 
     // create initial state
-
+    if (debugOn) {
+        import std.stdio;
+        writeln("GibbsMCMC performing initial sample");
+    }
     bool allSampled = false;
     size_t attempts = 0;
     do {
@@ -357,8 +360,13 @@ Sequence!(Distribution!(T)) MarkovGibbsSampler(T)(Sequence!(Distribution!(T)) ob
             }
             allSampled = true;
         }
-    } while (!allSampled);    
-
+    } while (!allSampled);  
+      
+    if (debugOn) {
+        import std.stdio;
+        writeln("GibbsMCMC initial sample complete");
+    }
+    
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
         auto position = i % observations.length;
@@ -438,6 +446,10 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
 
     // create initial state
 
+    if (debugOn) {
+        import std.stdio;
+        writeln("HybridMCMC performing initial sample");
+    }
     bool allSampled = false;
     size_t attempts = 0;
     do {
@@ -464,7 +476,12 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
             allSampled = true;
         }
     } while (!allSampled);
-    
+
+    if (debugOn) {
+        import std.stdio;
+        writeln("HybridMCMC initial sample complete");
+    }
+
     foreach(i; 0 .. (burn_in_samples + total_samples)) {
 
         auto position = i % observations.length;

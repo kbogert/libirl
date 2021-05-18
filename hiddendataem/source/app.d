@@ -332,7 +332,10 @@ void main(string[] args) {
         E_step = new HybridMCMCApproximatePartialTrajectoryToTrajectoryDistr(model, reward, MCMCRepeats, burnInSamples, totalMCMCSamples, uniformProposal, null, true, debugOn);
         break;
     }
-        
+
+    if (debugOn) {
+        writeln("Config loaded, beginning solver");
+    }
     auto lme_irl = new LME_IRL!(State, Action)(M_step, E_step, emTolerance, emIterations, debugOn);
 
     double [] rand_weights = new double[reward.getSize()];

@@ -379,7 +379,7 @@ unittest {
         // make sure the inverse error is low, like less than a state's value
         lr.setWeights(true_weights);
         model.setR(lr.toFunction());
-        auto V = soft_max_value_iteration(model, model.getValueIterationTolerance() , 100);
+        auto V = soft_max_value_iteration(model, model.getValueIterationTolerance() * max( max ( model.R() )), 100);
         assert(err >= 0 && err < V[model.S().getOne()], "MaxEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(true_weights));
 
 /*        This is a stupid way of testing IRL, do it right,
