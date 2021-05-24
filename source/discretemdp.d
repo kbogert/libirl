@@ -99,12 +99,12 @@ public Function!(double, State) value_iteration(Model m, double tolerance, Funct
 
 public Function!(double, State, Action) q_value_iteration(Model m, double tolerance, int max_iter = int.max) {
 
-    return sumout!(State) (m.T() * value_iteration(m, tolerance, max_iter) );
+    return m.R() + m.gamma() * sumout!(State) (m.T() * value_iteration(m, tolerance, max_iter) );
 }
 
 public Function!(Tuple!(Action), State) optimum_policy (Function!(double, State) V, Model m) {
 
-    return argmax( sumout!(State)( m.T() * V ) );
+    return argmax( m.R() + m.gamma() * sumout!(State)( m.T() * V ) );
 
 }
 
@@ -420,6 +420,7 @@ class SoftMaxModel : BasicModel {
             policy_cache_valid = true;
         }
 
+        
         return policy_cache.get!(ConditionalDistribution!(Action, State));        
     }
 }
@@ -618,12 +619,12 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
 
 public Function!(double, State, Action) soft_max_q_value_iteration(Model m, double tolerance, int max_iter = int.max) {
 
-    return sumout!(State) (m.T() * soft_max_value_iteration(m, tolerance, max_iter) );
+    return m.R() + m.gamma() * sumout!(State) (m.T() * soft_max_value_iteration(m, tolerance, max_iter) );
 }
 
 public ConditionalDistribution!(Action, State) soft_max_policy(Function!(double, State) V, Model m) {
 
-    auto Q = sumout!(State)( m.T() * V);
+    auto Q = m.R() + m.gamma() * sumout!(State)( m.T() * V);
 
     return soft_max_policy( Q , m );
 
