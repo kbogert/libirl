@@ -313,6 +313,8 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
     protected Variant inference_cache;
     protected bool stochasticGradientDescent;
     protected bool debugOn;
+
+    protected Function!(double, State, Action, State) flattenedTransitions;
         
     protected double [] true_weights;
     public this (Model m, LinearReward lw, double tolerance, double [] true_weights, bool stochasticGradientDescent = true, bool debugOn = false) {
@@ -347,6 +349,8 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
             writeln(feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize()));
 
         }
+
+        flattenedTransitions = model.T().flatten();
         
         if (stochasticGradientDescent) {
 
@@ -361,7 +365,7 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
 
             auto expert_fe = feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize());
 
-            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 0.28, tol, 50, & Gradient, true, 5, debugOn);
+            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 0.28, tol, 1000, & Gradient, true, 5, debugOn);
 //            // normalize initial weights
 //            returnval[] /= l1norm(returnval);
 //            returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & Gradient);
@@ -380,7 +384,7 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
             
         } else {
                     
-            auto transitions = model.T().flatten();
+            auto transitions = flattenedTransitions;
             auto log_Z_s = new Function!(double, State)(model.S(), 0.0);
             ConditionalDistribution!(Action, State) [] P_a_s_t;
             P_a_s_t.length = T;
@@ -420,7 +424,7 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
 
     Distribution!(State, Action)[] StateActionDistributionPerTimestep(ConditionalDistribution!(Action, State)[] policy) {
 
-        auto transitions = model.T().flatten();
+        auto transitions = flattenedTransitions;
 
         Distribution!(State, Action)[] D_s_a_t;
 
@@ -563,7 +567,7 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
     Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {
         auto D_s_a = new Distribution!(State, Action)(model.S().cartesian_product(model.A()), 0.0);
 
-        auto transitions = model.T().flatten();
+        auto transitions = flattenedTransitions;
   
         foreach (s; model.S()) {
             foreach (a; model.A()) {
@@ -583,7 +587,6 @@ class MaxCausalEntIRL_SGDApprox : MaxCausalEntIRL_InfMDP {
                 }
             }
         }
-
         return D_s_a;        
     }
 
@@ -614,7 +617,7 @@ class MaxCausalEntIRL_SGDEmpirical : MaxCausalEntIRL_SGDApprox {
     override Distribution!(State, Action) StateActionDistributionAtTimestep(ConditionalDistribution!(Action, State)[] policy, size_t timestep) {
         auto D_s_a = new Distribution!(State, Action)(model.S().cartesian_product(model.A()), 0.0);
 
-        auto transitions = model.T().flatten();
+        auto transitions = flattenedTransitions;
   
         foreach (s; model.S()) {
             foreach (a; model.A()) {
