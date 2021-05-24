@@ -276,6 +276,8 @@ void main(string[] args) {
 
         root = saveTrajectories(trajectories);        
         dumper.dump(File(trajFile, "w").lockingTextWriter, root);
+        
+        writeln("Files written with true rewards: ", reward.getWeights());
 
         return;
     }
