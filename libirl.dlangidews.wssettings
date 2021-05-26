@@ -17,23 +17,18 @@
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/solvers.d",
-            "column": 366,
-            "row": 22
+            "column": 479,
+            "row": 4
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/maxentIRL.d",
-            "column": 591,
-            "row": 73
+            "column": 569,
+            "row": 8
         },
         {
             "file": "/home/kbogert/Documents/libirl/source/discretemdp.d",
-            "column": 603,
-            "row": 27
-        },
-        {
-            "file": "/home/kbogert/Documents/libirl/test/source/gridworld.d",
-            "column": 0,
-            "row": 0
+            "column": 610,
+            "row": 15
         }
     ],
     "expandedItems": [
@@ -42,6 +37,6 @@
         "/home/kbogert/Documents/libirl/test/source",
         "/home/kbogert/Documents/libirl/hiddendataem/source"
     ],
-    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/maxentIRL.d",
+    "selectedWorkspaceItem": "/home/kbogert/Documents/libirl/source/solvers.d",
     "buildConfiguration": 2
 }

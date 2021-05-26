@@ -430,16 +430,17 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
     double [Tuple!T][] returnval_arr = new double[Tuple!T][observations.length];
 
     Sequence!(Distribution!(T)) returnval = new Sequence!(Distribution!(T))(observations.length);
+
     foreach(t ; 0 .. observations.length) {
         returnval[t] = tuple(new Distribution!(T)(observations[t][0].param_set(), 0.0));
 
-        // validate proposal distribution
+/*        // validate proposal distribution
 
         foreach (T1; observations[t][0].param_set()) {
             if (proposal_distributions[t][0][T1].entropy() == 0.0) {
                 throw new Exception("Proposal distribution cannot have zero entropy, at least two tokens must have non-zero probability.");
             }
-        }            
+        }            */
     }    
     
     Sequence!(T) currentState = new Sequence!(T)(observations.length);
@@ -454,7 +455,6 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
     size_t attempts = 0;
     do {
         foreach(t; 0 .. observations.length) {
-
             try {
                 if (t == 0) {
                     currentState[t] = new Distribution!(T)((initial_state * observations[t][0])).sample();
@@ -467,6 +467,20 @@ Sequence!(Distribution!(T)) HybridMCMC(T)(Sequence!(Distribution!(T)) observatio
                 // assume this is due to distributions with all zeros
                 allSampled = false;
                 attempts ++;
+
+
+/*void print_sequence(Sequence!(T) seq) {
+    import std.stdio;
+
+    foreach (t, timestep; seq) {
+
+        write("<", timestep[0][0], " ", timestep[0][1], ">, ");
+        
+    }
+    writeln();
+
+}                
+                print_sequence(currentState);*/
                 if (attempts > observations.length * initial_state.param_set().size() * 1000) {
                     import std.conv;
                     throw new Exception("Unable to create initial trajectory sample after" ~ to!string(observations.length * initial_state.param_set().size() * 1000) ~ " attempts");
