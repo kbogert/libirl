@@ -360,7 +360,7 @@ unittest {
     double gamma = 0.95;
     double value_error = 0.001;
     double idealStateTransitionProb = .90;
-    size_t numTrajectories = 100000;
+    size_t numTrajectories = 200000;
     int trajLength = cast(int)ceil(log(value_error / 2) / log(gamma));
     
     auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);

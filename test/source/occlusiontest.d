@@ -140,7 +140,7 @@ unittest {
         w = 0;
     }
     true_weights[$-1] = 1;
-   
+
     auto reward_obj = new UniqueFeaturesPerStateActionReward(states, actions, true_weights);
 
     auto model = new BasicModel(states, actions, transitions, reward_obj.toFunction(), 0.95, new Distribution!(State)(states, DistInitType.Uniform), 0.1);
@@ -154,7 +154,7 @@ unittest {
 
     traj[0] = tuple(states.toArray()[0][0], actions.toArray()[1][0]);
     traj[1] = Tuple!(State, Action)(null, null);
-    traj[2] = tuple(states.toArray()[2][0], actions.toArray()[0][0]);
+    traj[2] = tuple(states.toArray()[2][0], actions.toArray()[1][0]);
 
 
     Sequence!(State, Action)[] arr = new Sequence!(State, Action)[1];
@@ -179,7 +179,7 @@ unittest {
 
     assert(distr[0][0][0][tuple(states.toArray()[0][0], actions.toArray()[1][0])] == 1, "Trajectory calc failed in first entry, " ~ to!string(distr));
     assert(distr[0][1][0][tuple(states.toArray()[1][0], actions.toArray()[1][0])] == 1, "Trajectory calc failed in unknown entry");
-    assert(distr[0][2][0][tuple(states.toArray()[2][0], actions.toArray()[0][0])] == 1, "Trajectory calc failed in third entry");
+    assert(distr[0][2][0][tuple(states.toArray()[2][0], actions.toArray()[1][0])] == 1, "Trajectory calc failed in third entry");
     
 
     traj = new Sequence!(State, Action)(4);
@@ -187,7 +187,7 @@ unittest {
     traj[0] = tuple(states.toArray()[0][0], actions.toArray()[1][0]);
     traj[1] = Tuple!(State, Action)(null, null);
     traj[2] = Tuple!(State, Action)(null, null);
-    traj[3] = tuple(states.toArray()[2][0], actions.toArray()[0][0]);
+    traj[3] = tuple(states.toArray()[2][0], actions.toArray()[1][0]);
 
     arr[0] = traj;
 

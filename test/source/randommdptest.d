@@ -74,7 +74,7 @@ unittest {
         auto weight_scale = 2.0;
         auto gamma = 0.95;
         auto value_error = 0.01;
-        size_t numTrajectories = 2000*mdpStates*mdpActions;
+        size_t numTrajectories = 5000*mdpStates*mdpActions;
         int trajLength = cast(int)ceil(log(value_error / 2) / log(gamma));
 
         UniqueFeaturesPerStateActionReward lr;
