@@ -8,6 +8,7 @@ import std.stdio;
 import std.conv;
 import std.typecons;
 import std.math;
+import std.algorithm;
 
 @name("Deterministic Gridworld building")
 unittest {
@@ -360,7 +361,7 @@ unittest {
     double gamma = 0.95;
     double value_error = 0.001;
     double idealStateTransitionProb = .90;
-    size_t numTrajectories = 200000;
+    size_t baseNumTrajectories = 200;
     int trajLength = cast(int)ceil(log(value_error / 2) / log(gamma));
     
     auto optimal_state = new GridWorldState(sizeX - 1, sizeY - 1);
@@ -386,30 +387,39 @@ unittest {
     auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) );
     auto pi = optimum_policy(V, model);
 
-    // find empirical state visitation frequency
-
-    Function!(double, State) mu2 = new Function!(double, State)(model.S(), 0.0);
-
-    foreach(i; 0 .. numTrajectories) {
-
-        auto traj = simulate(model, to_stochastic_policy(pi, model.A()), trajLength, model.initialStateDistribution(), true );
-
-        auto g = 1.0;
-        
-        foreach(timestep; traj) {
-
-            mu2[timestep[0]] += g / numTrajectories;
-            g *= gamma;
-        }
-    }
-    
-    
     auto mu1 = stateVisitationFrequency(model, pi, value_error);
 
-    foreach (s; model.S()) {
-        assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
-    }    
+    // find empirical state visitation frequency
+    double lastAvgDiff = double.infinity;
+    size_t numTrajectories = baseNumTrajectories;
         
+    foreach (multiplier; 0 .. 3) {
+
+        Function!(double, State) mu2 = new Function!(double, State)(model.S(), 0.0);
+
+        foreach(i; 0 .. numTrajectories) {
+
+            auto traj = simulate(model, to_stochastic_policy(pi, model.A()), trajLength, model.initialStateDistribution(), true );
+
+            auto g = 1.0;
+        
+            foreach(timestep; traj) {
+
+                mu2[timestep[0]] += g / numTrajectories;
+                g *= gamma;
+            }
+        }
+    
+        double avgdiff = 0.0;
+        foreach (s; model.S()) {
+            avgdiff += abs(mu1[s[0]] - mu2[s[0]]) / (min ( mu1[s[0]], mu2[s[0]]) );
+        }
+        avgdiff /= model.S().size();
+        assert (avgdiff <= lastAvgDiff, "State Visitation Frequency error not decreasing: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " Average relative diff: " ~ to!string(avgdiff) ~ " lastAvgDiff " ~ to!string(lastAvgDiff) ~ " Iteration " ~ to!string(multiplier));
+
+        lastAvgDiff = avgdiff;
+        numTrajectories *= 20;    
+    }
 
     // test sub-rational cases
 
@@ -418,29 +428,38 @@ unittest {
 
     auto V2 = soft_max_value_iteration(model2, value_error * max ( max( lr.toFunction())) );
     auto pi2 = soft_max_policy(V2, model2);
-
-    // find empirical state visitation frequency
-
-    mu2 = new Function!(double, State)(model2.S(), 0.0);
-
-    foreach(i; 0 .. numTrajectories) {
-
-        auto traj = simulate(model2, pi2, trajLength, model2.initialStateDistribution(), true );
-
-        auto g = 1.0;
-        
-        foreach(timestep; traj) {
-
-            mu2[timestep[0]] += g / numTrajectories;
-            g *= gamma;
-        }
-    }
-    
     
     mu1 = stateVisitationFrequency(model2, pi2, value_error);
 
-    foreach (s; model2.S()) {
-        assert (isClose(mu1[s[0]], mu2[s[0]], 0.01, 1e-5), "State Visitation Frequency functions differ: 1: " ~ to!string(mu1[s[0]]) ~ "\n\n 2: " ~ to!string(mu2[s[0]]) ~ " " ~ to!string(s[0]));
-    }    
-           
+    // find empirical state visitation frequency
+    lastAvgDiff = double.infinity;
+    numTrajectories = baseNumTrajectories;
+
+    foreach (multiplier; 0 .. 3) {
+        Function!(double, State) mu2 = new Function!(double, State)(model2.S(), 0.0);
+
+        foreach(i; 0 .. numTrajectories) {
+
+            auto traj = simulate(model2, pi2, trajLength, model2.initialStateDistribution(), true );
+
+            auto g = 1.0;
+        
+            foreach(timestep; traj) {
+
+                mu2[timestep[0]] += g / numTrajectories;
+                g *= gamma;
+            }
+        }
+
+              
+        double avgdiff = 0.0;
+        foreach (s; model.S()) {
+            avgdiff += abs(mu1[s[0]] - mu2[s[0]]) / (min ( mu1[s[0]], mu2[s[0]]) );
+        }
+        avgdiff /= model.S().size();
+        assert (avgdiff <= lastAvgDiff, "State Visitation Frequency error not decreasing: 1: " ~ to!string(mu1) ~ "\n\n 2: " ~ to!string(mu2) ~ " Average relative diff: " ~ to!string(avgdiff) ~ " lastAvgDiff " ~ to!string(lastAvgDiff) ~ " Iteration " ~ to!string(multiplier));
+
+        lastAvgDiff = avgdiff;
+        numTrajectories *= 20;
+    }
 }
