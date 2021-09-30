@@ -275,6 +275,94 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 }
 
 
+double [] nonNegativeUnconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false) {
+//    import std.stdio;
+
+    double [] beta = new double[expert_features.length];
+    beta[0..(beta.length)] = - log(beta.length);  
+    
+
+    double [] z_prev = new double [beta.length];
+    z_prev[] = 0;
+    double [] w_prev = new double [beta.length];
+    w_prev[] = 0;
+
+    size_t t = 0;
+    size_t iterations = 0;
+    double[][] moving_average_data;
+    size_t moving_average_counter = 0;
+    double [] err_moving_averages = new double[moving_average_length];
+    foreach (ref e ; err_moving_averages) {
+       e = double.max;
+    }
+    double err_diff = double.infinity;
+
+    while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
+
+        double [] m_t = z_prev.dup;
+
+        if (! usePathLengthBounds && iterations > 0)
+            m_t[] /= iterations;
+
+        double [] weights = new double[beta.length];
+        foreach (i ; 0 .. beta.length) {
+            weights[i] = exp(beta[i] - nu*m_t[i]);
+        }
+
+        double [] z_t = ff(weights);
+
+        
+        z_t[] -= expert_features[];
+        foreach(ref z; z_t) {
+//            z = min(0, z);
+            if (z < 0) {
+                z = -(1.0 / 10) * log(-(z - 1));
+            }
+
+        }
+        if (debugOn) {
+            import std.stdio;        
+            writeln(iterations, ": ", z_t, " vs ", expert_features, " weights: ", weights);
+        }
+            
+        if (usePathLengthBounds) {
+            z_prev = z_t;
+        } else {
+            z_prev[] += z_t[];
+        }
+
+        foreach(i; 0..beta.length) {
+            beta[i] = beta[i] - nu*z_t[i] - nu*nu*(z_t[i] - m_t[i])*(z_t[i] - m_t[i]);
+            if (isNaN(beta[i])) {
+                beta[i] = 0;
+            }
+        }	
+
+
+//        t ++;
+ //       t %= expert_features.length;
+        iterations ++;
+//        if (t == 0) {
+            nu /= 1.01;
+            err_moving_averages[moving_average_counter] = l1norm(z_t);
+            moving_average_counter ++;
+            moving_average_counter %= moving_average_length;
+            err_diff = stddev(err_moving_averages);
+            if (debugOn) {
+                import std.stdio;
+                writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+//               writeln(abs_diff_average(err_moving_averages));
+            }
+//            writeln(err_moving_averages, " ", err_diff);
+//            writeln(err_diff);
+//            writeln(abs_diff_average(err_moving_averages));
+//        }
+        w_prev = weights;
+    }
+        
+    return w_prev;
+}
+
 
 Sequence!(Distribution!(T)) SequenceMarkovChainSmoother(T)(Sequence!(Distribution!(T)) observations, ConditionalDistribution!(T, T) transitions, Distribution!(T) initial_state) {
 

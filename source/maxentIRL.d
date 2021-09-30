@@ -645,7 +645,7 @@ class LME_IRL (T ...) {
     protected Sequence_MaxEnt_Problem!(T) M;
     protected Sequence_Distribution_Computer!(T) E;
     protected double tolerance;
-    protected double max_iter;
+    protected size_t max_iter;
     protected bool debug_output;
     
     public this(Sequence_MaxEnt_Problem!(T) M, Sequence_Distribution_Computer!(T) E, double EM_tolerance, size_t EM_max_iter, bool debug_output = false) {
