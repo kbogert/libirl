@@ -230,10 +230,10 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
         double [] z_t = ff(actual_weights);
 
-        if (debugOn) {
+/*        if (debugOn) {
             import std.stdio;        
             writeln(iterations, ": ", z_t, " vs ", expert_features, " weights: ", actual_weights);
-        }
+        }*/
         
         z_t[] -= expert_features[];
             
@@ -254,23 +254,28 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
  //       t %= expert_features.length;
         iterations ++;
 //        if (t == 0) {
-            nu /= 1.01;
+            nu /= 1.005;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             err_diff = stddev(err_moving_averages);
-            if (debugOn) {
+/*            if (debugOn) {
                 import std.stdio;
                 writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
-            }
+            }*/
 //            writeln(err_moving_averages, " ", err_diff);
 //            writeln(err_diff);
 //            writeln(abs_diff_average(err_moving_averages));
 //        }
         w_prev = actual_weights;   
     }
-        
+     if (debugOn) {
+                import std.stdio;
+//                writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+            writeln(iterations, ": ", z_prev, " vs ", expert_features, " weights: ", w_prev);
+//               writeln(abs_diff_average(err_moving_averages));
+            }   
     return w_prev;
 }
 
@@ -343,22 +348,27 @@ double [] nonNegativeUnconstrainedAdaptiveExponentiatedGradientDescent(double []
  //       t %= expert_features.length;
         iterations ++;
 //        if (t == 0) {
-            nu /= 1.01;
+            nu /= 1.005;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             err_diff = stddev(err_moving_averages);
-            if (debugOn) {
+/*            if (debugOn) {
                 import std.stdio;
                 writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
-            }
+            }*/
 //            writeln(err_moving_averages, " ", err_diff);
 //            writeln(err_diff);
 //            writeln(abs_diff_average(err_moving_averages));
 //        }
         w_prev = weights;
     }
+            if (debugOn) {
+                import std.stdio;
+                writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+//               writeln(abs_diff_average(err_moving_averages));
+            }
         
     return w_prev;
 }
