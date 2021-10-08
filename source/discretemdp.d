@@ -706,8 +706,11 @@ Function!(double, State, Action) stateActionVisitationFrequency(Model m, Functio
     return returnval;
 }
 
+Function!(double, State, Action) stateActionVisitationFrequency(Model m, ConditionalDistribution!(Action, State)  policy, double tolerance, int max_iter = int.max) {
+    return stateActionVisitationFrequency(m, policy, tolerance, m.gamma(), max_iter);
+}
 
-Function!(double, State, Action) stateActionVisitationFrequency(Model m, ConditionalDistribution!(Action, State)  policy, double tolerance, double gamma, int max_iter = int.max) {
+Function!(double, State, Action) stateActionVisitationFrequency(Model m, ConditionalDistribution!(Action, State)  policy, double tolerance, double gamma, int max_iter) {
     
     auto state_freq = stateVisitationFrequency(m, policy, tolerance, max_iter);
             
@@ -831,8 +834,7 @@ Function!(double, State)[] stateVisitationFrequencyPerTimestep(Model m, Conditio
         diff = max ( mu_next ); 
 
         mu_prev = mu_next;
-        iter ++;
-        
+        iter ++;   
     }
 
     return returnval;
