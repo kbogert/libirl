@@ -185,27 +185,27 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
 
 
-double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null) {
+double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100) {
     import std.stdio;
 
     double [] beta = new double[expert_features.length * 2];
-/*    if (! (initial_params is null)) {
+    if (! (initial_params is null)) {
         writeln(initial_params);
         beta[] = 0;
         foreach(i, ip; initial_params) {
             if (ip > 0) {
-                beta[i] = log(2*ip);
-                beta[i + beta.length/2] = log(ip);
+                beta[i] = log(1.5*ip);
+                beta[i + beta.length/2] = log(0.5*ip);
             } else{
-                beta[i] = log(-ip);                
-                beta[i + beta.length/2] = log(2*-ip); 
+                beta[i] = log(0.5*-ip);                
+                beta[i + beta.length/2] = log(1.5*-ip); 
             }
         }
         writeln(beta);
-    } else {*/
+    } else {
         beta[0..(beta.length / 2)] = - log(beta.length / 2 );
         beta[beta.length/2 .. $] = - log(beta.length );   
-  //  }
+    }
 
     double [] z_prev = new double [beta.length / 2];
     z_prev[] = 0;
@@ -245,7 +245,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
         if (debugOn) {
             import std.stdio;        
-            writeln(iterations, ": ", z_t, " vs ", expert_features, " weights: ", actual_weights);
+            writeln(nu, " ", iterations, ": ", z_t, " vs ", expert_features, " weights: ", actual_weights);
         }
         
         z_t[] -= expert_features[];
@@ -267,14 +267,23 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
  //       t %= expert_features.length;
         iterations ++;
 //        if (t == 0) {
-            nu /= 1.005;
+            nu /= 1.0005;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
+            auto old_err_diff = err_diff;
             err_diff = stddev(err_moving_averages);
+            if ((old_err_diff - err_diff) / err_diff < -0.1) {
+                nu /= 1.5;
+                if (debugOn)
+                    writeln("correct nu down");
+            } /*else if ((old_err_diff - err_diff) / err_diff > 0.4) {
+                nu /= 0.995;
+                writeln("correct nu up");
+            }*/
             if (debugOn) {
                 import std.stdio;
-                writeln("GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+                writeln(beta, "GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
             }
 //            writeln(err_moving_averages, " ", err_diff);
@@ -282,6 +291,11 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 //            writeln(abs_diff_average(err_moving_averages));
 //        }
         w_prev = actual_weights;   
+
+        if (l2norm(w_prev) > weight_limit) {
+            // weight magnitude too large, probably can't solve the problem
+            break;
+        }
     }
      if (debugOn) {
                 import std.stdio;
