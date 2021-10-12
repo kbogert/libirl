@@ -190,7 +190,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
     double [] beta = new double[expert_features.length * 2];
     if (! (initial_params is null)) {
-        writeln(initial_params);
+//        writeln(initial_params);
         beta[] = 0;
         foreach(i, ip; initial_params) {
             if (ip > 0) {
@@ -201,7 +201,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
                 beta[i + beta.length/2] = log(1.5*-ip); 
             }
         }
-        writeln(beta);
+//        writeln(beta);
     } else {
         beta[0..(beta.length / 2)] = - log(beta.length / 2 );
         beta[beta.length/2 .. $] = - log(beta.length );   
