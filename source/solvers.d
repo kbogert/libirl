@@ -186,22 +186,26 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
 
 double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null) {
-//    import std.stdio;
+    import std.stdio;
 
     double [] beta = new double[expert_features.length * 2];
-    if (! (initial_params is null)) {
+/*    if (! (initial_params is null)) {
+        writeln(initial_params);
         beta[] = 0;
         foreach(i, ip; initial_params) {
-            if (ip >= 0) {
-                beta[i] = ip;
+            if (ip > 0) {
+                beta[i] = log(2*ip);
+                beta[i + beta.length/2] = log(ip);
             } else{
-                beta[i + beta.length/2] = -ip; 
+                beta[i] = log(-ip);                
+                beta[i + beta.length/2] = log(2*-ip); 
             }
         }
-    } else {
+        writeln(beta);
+    } else {*/
         beta[0..(beta.length / 2)] = - log(beta.length / 2 );
         beta[beta.length/2 .. $] = - log(beta.length );   
-    }
+  //  }
 
     double [] z_prev = new double [beta.length / 2];
     z_prev[] = 0;
@@ -230,7 +234,6 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             weights[i] = exp(beta[i] - nu*m_t[i]);
             weights[i + (beta.length / 2)] = exp(beta[i + (beta.length / 2)] + nu*m_t[i]);
         }
-
         // allow for negative weights by interpreting the second half
         // of the weight vector as negative values
         double [] actual_weights = new double[beta.length / 2];
