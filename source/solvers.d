@@ -273,7 +273,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             moving_average_counter %= moving_average_length;
             auto old_err_diff = err_diff;
             err_diff = stddev(err_moving_averages);
-            if ((old_err_diff - err_diff) / err_diff < -0.1) {
+            if ((old_err_diff - err_diff) / err_diff < -0.2) {
                 nu /= 1.5;
                 if (debugOn)
                     writeln("correct nu down");
