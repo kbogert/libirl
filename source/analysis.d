@@ -19,11 +19,11 @@ double calcInverseLearningError(Model model, Reward true_reward, Reward learned_
     try {
         
         model.setR(true_reward.toFunction());
-        auto Q = q_value_iteration(model, tolerance * max ( max( true_reward.toFunction())), max_iter);
+        auto Q = q_value_iteration(model, tolerance * max ( max( abs(true_reward.toFunction()))), max_iter);
         auto pi_star = optimum_policy(Q);
     
         model.setR(learned_reward.toFunction());
-        auto learned_value = value_iteration(model, tolerance * max ( max( learned_reward.toFunction())), max_iter);
+        auto learned_value = value_iteration(model, tolerance * max ( max( abs(learned_reward.toFunction()))), max_iter);
         auto pi_L = optimum_policy(learned_value, model);
 
         auto V_pi_star = Q.apply(pi_star);
