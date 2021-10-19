@@ -95,12 +95,27 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
     return weights;
 }
 
-double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false) {
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100) {
 //    import std.stdio;
 
     double [] beta = new double[expert_features[0].length * 2];
-    beta[0..(beta.length / 2)] = - log(beta.length / 2 );
-    beta[beta.length/2 .. $] = - log(beta.length );   
+    if (! (initial_params is null)) {
+//        writeln(initial_params);
+        beta[] = 0;
+        foreach(i, ip; initial_params) {
+            if (ip > 0) {
+                beta[i] = log(1.5*ip);
+                beta[i + beta.length/2] = log(0.5*ip);
+            } else{
+                beta[i] = log(0.5*-ip);                
+                beta[i + beta.length/2] = log(1.5*-ip); 
+            }
+        }
+//        writeln(beta);
+    } else {
+        beta[0..(beta.length / 2)] = - log(beta.length / 2 );
+        beta[beta.length/2 .. $] = - log(beta.length );   
+    }
     
 
     double [] z_prev = new double [beta.length / 2];
@@ -163,12 +178,20 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         t %= expert_features.length;
         iterations ++;
         if (t == 0) {
-            nu /= 1.04;
+            nu /= 1.0005;
             err_moving_averages[moving_average_counter] = abs_average(moving_average_data);
             moving_average_counter ++;
             moving_average_counter %= moving_average_length;
             moving_average_data.length = 0;
+            auto old_err_diff = err_diff;
             err_diff = stddev(err_moving_averages);
+            if ((old_err_diff - err_diff) / err_diff < -0.2) {
+                nu /= 1.5;
+                if (debugOn) {
+                    import std.stdio;
+                    writeln("correct nu down");
+                }
+            } 
             if (debugOn) {
                 import std.stdio;
                 writeln("SGD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
@@ -176,7 +199,12 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
             }
         }
         moving_average_data ~= z_t.dup;
-        w_prev = actual_weights;   
+        w_prev = actual_weights;  
+
+        if (l2norm(w_prev) > weight_limit) {
+            // weight magnitude too large, probably can't solve the problem
+            break;
+        } 
     }
         
     return w_prev;
@@ -214,14 +242,18 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
     size_t t = 0;
     size_t iterations = 0;
-    double[][] moving_average_data;
     size_t moving_average_counter = 0;
     double [] err_moving_averages = new double[moving_average_length];
     foreach (ref e ; err_moving_averages) {
        e = double.max;
     }
     double err_diff = double.infinity;
-
+    double [][] oscillation_check_data;
+    foreach(i; 0 .. moving_average_length) {
+        oscillation_check_data ~= new double[beta.length /2];
+        oscillation_check_data[i][] = 0;
+    }
+    
     while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
 
         double [] m_t = z_prev.dup;
@@ -269,21 +301,47 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 //        if (t == 0) {
             nu /= 1.0005;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
-            moving_average_counter ++;
-            moving_average_counter %= moving_average_length;
+            oscillation_check_data[moving_average_counter] = actual_weights;
+            
             auto old_err_diff = err_diff;
             err_diff = stddev(err_moving_averages);
-            if ((old_err_diff - err_diff) / err_diff < -0.2) {
-                nu /= 1.5;
+           
+            bool oscillation_detected = false;
+            foreach( o; 0 .. z_t.length) {
+                bool [] arrows = new bool[oscillation_check_data.length];
+                arrows[] = true;
+                foreach(osc; moving_average_counter + 1 .. 1 + moving_average_counter + oscillation_check_data.length) {
+                    if (oscillation_check_data[osc % moving_average_length][o] > oscillation_check_data[(osc + 1) % moving_average_length][o])
+                        arrows[osc % moving_average_length] = false;
+                }
+                if (debugOn)
+                    writeln(arrows);
+                int changeCount = 0;
+                foreach(osc; moving_average_counter + 1 .. 1 + moving_average_counter + oscillation_check_data.length) {
+                    if (arrows[osc % moving_average_length] != arrows[(osc + 1) % moving_average_length])
+                        changeCount ++;
+                }
+
+                if (changeCount >= 3) {
+                    oscillation_detected = true;
+                    break;
+                }
+                
+            }
+            
+            if (oscillation_detected) {
+                nu *= 0.9;
                 if (debugOn)
                     writeln("correct nu down");
             } /*else if ((old_err_diff - err_diff) / err_diff > 0.4) {
                 nu /= 0.995;
                 writeln("correct nu up");
             }*/
+            moving_average_counter ++;
+            moving_average_counter %= moving_average_length;
             if (debugOn) {
                 import std.stdio;
-                writeln(beta, "GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
+                writeln(beta, " GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
             }
 //            writeln(err_moving_averages, " ", err_diff);
