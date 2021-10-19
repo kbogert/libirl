@@ -515,7 +515,7 @@ class MaxCausalEntIRL_InfMDP : MaxCausalEntIRL_Ziebart {
         reward.setWeights(weights);
         model.setR(reward.toFunction());
 
-        auto V_soft = soft_max_value_iteration(model, model.getValueIterationTolerance() * max ( max ( model.R() )), inference_cache);
+        auto V_soft = soft_max_value_iteration(model, model.getValueIterationTolerance() * max ( max ( abs( model.R() ) )), inference_cache);
         auto policy = soft_max_policy(V_soft, model);
 
         ConditionalDistribution!(Action, State) [] returnval = new ConditionalDistribution!(Action, State) [T];
