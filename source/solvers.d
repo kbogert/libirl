@@ -132,6 +132,11 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
        e = double.max;
     }
     double err_diff = double.infinity;
+    double [][] oscillation_check_data;
+    foreach(i; 0 .. moving_average_length) {
+        oscillation_check_data ~= new double[beta.length /2];
+        oscillation_check_data[i][] = 0;
+    }
 
     while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
 
@@ -180,18 +185,17 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         if (t == 0) {
             nu /= 1.0005;
             err_moving_averages[moving_average_counter] = abs_average(moving_average_data);
-            moving_average_counter ++;
-            moving_average_counter %= moving_average_length;
             moving_average_data.length = 0;
-            auto old_err_diff = err_diff;
             err_diff = stddev(err_moving_averages);
-            if ((old_err_diff - err_diff) / err_diff < -0.2) {
-                nu /= 1.5;
+            if (detect_oscillation(oscillation_check_data, moving_average_counter, actual_weights)) {
+                nu *= 0.9;
                 if (debugOn) {
                     import std.stdio;
                     writeln("correct nu down");
                 }
-            } 
+            }
+            moving_average_counter ++;
+            moving_average_counter %= moving_average_length;
             if (debugOn) {
                 import std.stdio;
                 writeln("SGD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
@@ -301,35 +305,9 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 //        if (t == 0) {
             nu /= 1.0005;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
-            oscillation_check_data[moving_average_counter] = actual_weights;
-            
-            auto old_err_diff = err_diff;
-            err_diff = stddev(err_moving_averages);
-           
-            bool oscillation_detected = false;
-            foreach( o; 0 .. z_t.length) {
-                bool [] arrows = new bool[oscillation_check_data.length];
-                arrows[] = true;
-                foreach(osc; moving_average_counter + 1 .. 1 + moving_average_counter + oscillation_check_data.length) {
-                    if (oscillation_check_data[osc % moving_average_length][o] > oscillation_check_data[(osc + 1) % moving_average_length][o])
-                        arrows[osc % moving_average_length] = false;
-                }
-                if (debugOn)
-                    writeln(arrows);
-                int changeCount = 0;
-                foreach(osc; moving_average_counter + 1 .. 1 + moving_average_counter + oscillation_check_data.length) {
-                    if (arrows[osc % moving_average_length] != arrows[(osc + 1) % moving_average_length])
-                        changeCount ++;
-                }
+            err_diff = stddev(err_moving_averages);           
 
-                if (changeCount >= 3) {
-                    oscillation_detected = true;
-                    break;
-                }
-                
-            }
-            
-            if (oscillation_detected) {
+            if (detect_oscillation(oscillation_check_data, moving_average_counter, actual_weights)) {
                 nu *= 0.9;
                 if (debugOn)
                     writeln("correct nu down");
@@ -364,6 +342,30 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
     return w_prev;
 }
 
+bool detect_oscillation(ref double [][] oscillation_data, size_t array_ptr, double [] new_weights) {
+    oscillation_data[array_ptr] = new_weights;
+
+    foreach( o; 0 .. new_weights.length) {
+        bool [] arrows = new bool[oscillation_data.length];
+        arrows[] = true;
+        foreach(osc; array_ptr + 1 .. 1 + array_ptr + oscillation_data.length) {
+            if (oscillation_data[osc % oscillation_data.length][o] > oscillation_data[(osc + 1) % oscillation_data.length][o])
+                arrows[osc % oscillation_data.length] = false;
+        }
+        int changeCount = 0;
+        foreach(osc; array_ptr + 1 .. 1 + array_ptr + oscillation_data.length) {
+            if (arrows[osc % oscillation_data.length] != arrows[(osc + 1) % oscillation_data.length])
+                changeCount ++;
+        }
+
+        if (changeCount >= 3) {
+            return true;
+        }
+                
+    }
+    return false;
+            
+}
 
 double [] nonNegativeUnconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false) {
 //    import std.stdio;
