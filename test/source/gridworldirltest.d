@@ -140,8 +140,12 @@ unittest {
         // Perform MaxEntIrl
 
         auto maxEntIRL = new MaxEntIRL_Ziebart_exact(model, lr, tolerance, weights, iter % 2 == 0);// alternate solvers
-        
-        double [] found_weights = maxEntIRL.solve (traj_to_traj_distr(trajectories, model)); 
+
+        double [] initial_weights = new double[weights.length];
+        foreach(ref w; initial_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        double [] found_weights = maxEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights); 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
 
@@ -225,7 +229,7 @@ unittest {
         double [] weights;
         weights.length = features[features.param_set.getOne()].length;
         foreach (ref w ; weights) {
-            w = uniform(0.0, 10.0);
+            w = uniform(-10.0, 10.0);
         }
 
         // randomly generate transition function
@@ -247,10 +251,10 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error , sizeX * sizeY * 10);
 
         
-        auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+        auto V = soft_max_value_iteration(model, value_error * max ( max( abs( lr.toFunction()))) , sizeX * sizeY * 10);
         auto policy = soft_max_policy(V, model);
 //        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
@@ -264,8 +268,12 @@ unittest {
         // Perform MaxCausalEntIrl
 
         auto maxCausalEntIRL = new MaxCausalEntIRL_Ziebart(model, lr, tolerance, weights, iter % 2 == 0);  // alternate solvers
-        
-        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
+
+        double [] initial_weights = new double[weights.length];
+        foreach(ref w; initial_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
@@ -350,7 +358,7 @@ unittest {
         double [] weights;
         weights.length = features[features.param_set.getOne()].length;
         foreach (ref w ; weights) {
-            w = uniform(0.0, 10.0);
+            w = uniform(-10.0, 10.0);
         }
 
         // randomly generate transition function
@@ -372,12 +380,12 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error , sizeX * sizeY * 10);
 
         
-        auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+        auto V = soft_max_value_iteration(model, value_error * max ( max( abs(lr.toFunction()))) , sizeX * sizeY * 10);
         auto policy = soft_max_policy(V, model);
-//        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+//        auto V = value_iteration(model, value_error * max ( max( abs( lr.toFunction()))) , sizeX * sizeY * 10);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
 
         Sequence!(State, Action) [] trajectories;
@@ -389,8 +397,12 @@ unittest {
         // Perform MaxCausalEntIrl_Inf
 
         auto maxCausalEntIRL = new MaxCausalEntIRL_InfMDP(model, lr, tolerance, weights, iter % 2 == 0);// alternate solvers
-        
-        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model)); 
+
+        double [] initial_weights = new double[weights.length];
+        foreach(ref w; initial_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights); 
 
         double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
 
@@ -401,8 +413,12 @@ unittest {
         // Perform MaxCausalEntIrl_Approx
         
         maxCausalEntIRL = new MaxCausalEntIRL_SGDApprox(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
-        
-        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
+
+        initial_weights = new double[weights.length];
+        foreach(ref w; initial_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
         err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
@@ -414,8 +430,12 @@ unittest {
         // Perform MaxCausalEntIrl_Empirical
         
         maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
-        
-        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model));
+
+        initial_weights = new double[weights.length];
+        foreach(ref w; initial_weights) {
+            w = uniform(0.001, 0.05);
+        }
+        found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
         err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
