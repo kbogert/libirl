@@ -122,13 +122,13 @@ unittest {
         }
         
         auto lr = new LinearReward(features, weights);
-        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( lr.toFunction())),  sizeX * sizeY * 10);
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform), value_error * max ( max( abs(lr.toFunction()))),  sizeX * sizeY * 10);
 
         
-        auto V = soft_max_value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+        auto V = soft_max_value_iteration(model, value_error * max ( max( abs(lr.toFunction()))) , sizeX * sizeY * 10);
 //        auto policy = soft_max_policy(V, model);
         auto policy = model.getPolicy();
-//        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+//        auto V = value_iteration(model, value_error * max ( max( abs(lr.toFunction()))) , sizeX * sizeY * 10);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
 
         Sequence!(State, Action) [] trajectories;
@@ -251,12 +251,12 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error , sizeX * sizeY * 10);
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( abs(lr.toFunction()))), sizeX * sizeY * 10);
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( abs( lr.toFunction()))) , sizeX * sizeY * 10);
         auto policy = soft_max_policy(V, model);
-//        auto V = value_iteration(model, value_error * max ( max( lr.toFunction())) , sizeX * sizeY * 10);
+//        auto V = value_iteration(model, value_error * max ( max( abs(lr.toFunction()))) , sizeX * sizeY * 10);
 //        auto policy = to_stochastic_policy(optimum_policy(V, model), actions);
 
         Sequence!(State, Action) [] trajectories;
@@ -380,7 +380,7 @@ unittest {
 //        writeln(transitions);
                 
         auto lr = new LinearReward(features, weights);
-        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error , sizeX * sizeY * 10);
+        auto model = new SoftMaxModel(states, actions, transitions, lr.toFunction(), gamma, new Distribution!(State)(states, DistInitType.Uniform),  value_error * max ( max( abs(lr.toFunction()))), sizeX * sizeY * 10);
 
         
         auto V = soft_max_value_iteration(model, value_error * max ( max( abs(lr.toFunction()))) , sizeX * sizeY * 10);
