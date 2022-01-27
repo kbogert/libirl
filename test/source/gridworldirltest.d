@@ -332,7 +332,7 @@ unittest {
     }
 */    
     
-    double[] tmpArray = new double[states.size];
+    double[] tmpArray = new double[states.size * actions.size];
     tmpArray[] = 0;
 
     Function!(double [], State, Action) features = new Function!(double [], State, Action)(states.cartesian_product(actions), tmpArray);
@@ -344,8 +344,8 @@ unittest {
             features[ s[0] , a[0] ][max(0, i - 1)] = 1.0;
             features[ s[0] , a[0] ][i] = 1.0;
             features[ s[0] , a[0] ][min(states.size() - 1, i + 1)] = 1.0;
+            i ++;
         }
-        i ++;
     }
 
     int iterations = 2;
@@ -428,7 +428,7 @@ unittest {
 
 
         // Perform MaxCausalEntIrl_Empirical
-/*        Remove for now, as this only works with state/action features (not state-only)
+
         maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
 
         initial_weights = new double[weights.length];
@@ -441,7 +441,7 @@ unittest {
         err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL_Empirical found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));*/
+        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL_Empirical found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }
