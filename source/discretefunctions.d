@@ -557,6 +557,30 @@ class Function (RETURN_TYPE, PARAM ...) {
 
         }
 
+        RETURN_TYPE min() {
+       
+            RETURN_TYPE min;
+            bool setMin = false;
+        
+            foreach (key ; mySet) {
+
+                RETURN_TYPE val = storage.get(key, funct_default);
+            
+                if (! setMin ) {
+                    min = val;
+                    setMin = true;
+                } else {
+                    if (val < min) {
+                        min = val;
+                    }
+                }                
+            
+            }
+
+            return min;
+
+        }
+        
         // numerically stable softmax
         RETURN_TYPE softmax()() 
             if (isFloatingPoint!(RETURN_TYPE))
@@ -950,6 +974,11 @@ class Function (RETURN_TYPE, PARAM ...) {
 public auto max(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 
     return f.max();
+}
+
+public auto min(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.min();
 }
 
 public auto max(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
