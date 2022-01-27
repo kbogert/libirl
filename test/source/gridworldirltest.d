@@ -343,7 +343,7 @@ unittest {
             features[ s[0] , a[0] ] = tmpArray.dup;
             features[ s[0] , a[0] ][max(0, i - 1)] = 1.0;
             features[ s[0] , a[0] ][i] = 1.0;
-            features[ s[0] , a[0] ][min(states.size() - 1, i + 1)] = 1.0;
+            features[ s[0] , a[0] ][min(tmpArray.length - 1, i + 1)] = 1.0;
             i ++;
         }
     }
