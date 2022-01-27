@@ -163,7 +163,7 @@ unittest {
     int sizeX = 5;
     int sizeY = 5;
     double gamma = 0.95;
-    double value_error = 0.1;
+    double value_error = 0.01;
     int samples = 1000 * sizeX * sizeY;
     double tolerance = 0.0001;
 
@@ -276,10 +276,10 @@ unittest {
         double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
-        double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
+        double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.getOne()], "MaxCausalEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~ to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
     }    
 
 }
@@ -292,7 +292,7 @@ unittest {
     int sizeX = 5;
     int sizeY = 5;
     double gamma = 0.95;
-    double value_error = 0.1;
+    double value_error = 0.01;
     int samples = 1000 * sizeX * sizeY;
     double tolerance = 0.0001;
 
@@ -404,10 +404,10 @@ unittest {
         }
         double [] found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights); 
 
-        double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
+        double err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.getOne()], "MaxCausalEntIRL_Inf found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL_Inf found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
 
 
         // Perform MaxCausalEntIrl_Approx
@@ -421,14 +421,14 @@ unittest {
         found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
-        err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
+        err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.getOne()], "MaxCausalEntIRL_Approx found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL_Approx found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
 
 
         // Perform MaxCausalEntIrl_Empirical
-        
+/*        Remove for now, as this only works with state/action features (not state-only)
         maxCausalEntIRL = new MaxCausalEntIRL_SGDEmpirical(model, lr, tolerance, weights, iter % 2 == 0); // alternate solvers
 
         initial_weights = new double[weights.length];
@@ -438,10 +438,10 @@ unittest {
         found_weights = maxCausalEntIRL.solve (traj_to_traj_distr(trajectories, model), initial_weights);
 
 
-        err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance, sizeX * sizeY * 10);
+        err = calcInverseLearningError(model, new LinearReward(features, weights), new LinearReward(features, found_weights), tolerance);
 
         // make sure the inverse error is low, like less than a state's value
-        assert(err >= 0 && err < V[states.getOne()], "MaxCausalEntIRL_Empirical found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));
+        assert(err >= 0 && err <= min(abs(V)), "MaxCausalEntIRL_Empirical found bad solution (err: " ~ to!string(err) ~ ", " ~  to!string(min(abs(V))) ~ ", " ~  to!string(iter) ~ ") : " ~ to!string(found_weights) ~ " correct: " ~ to!string(weights));*/
     }    
 
 }
