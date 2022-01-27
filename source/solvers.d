@@ -159,10 +159,10 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
         }
 
         double [] z_t = ff(actual_weights, t);
-//        if (debugOn) {
-//            import std.stdio;        
-//            writeln(t, ": ", z_t, " vs ", expert_features[t], " weights: ", actual_weights);
-//        }
+        if (debugOn) {
+            import std.stdio;        
+            writeln(t, ": ", z_t, " vs ", expert_features[t], " weights: ", actual_weights);
+        }
         
         z_t[] -= expert_features[t][];
             

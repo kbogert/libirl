@@ -81,7 +81,7 @@ class MaxEntIRL_Ziebart_approx : Sequence_MaxEnt_Problem!(State, Action) {
             sgd_block_size = 1;
             inference_counter = 0;
                         
-            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & EEFFeaturesAtTimestep, true, 5, false, initial_weights);
+            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 0.2, tol, 5000, & EEFFeaturesAtTimestep, true, 5, false, initial_weights);
         } else {
             // normalize initial weights
             initial_weights[] /= l1norm(initial_weights);
@@ -360,12 +360,12 @@ class MaxCausalEntIRL_Ziebart : Sequence_MaxEnt_Problem!(State, Action)  {
             sgd_block_size = 1;
             inference_counter = 0;
                         
-            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 1000, & GradientForTimestep, true, 5, debugOn, initial_weights);
+            returnval = unconstrainedAdaptiveExponentiatedStochasticGradientDescent(expert_fe, 1, tol, 5000, & GradientForTimestep, true, 5, debugOn, initial_weights);
         } else {
 
             auto expert_fe = feature_expectations_from_trajectories(trajectories, &reward.getFeatures, reward.getSize());
 
-            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 0.28, tol, 1000, & Gradient, true, 5, debugOn, initial_weights);
+            returnval = unconstrainedAdaptiveExponentiatedGradientDescent(expert_fe, 0.2, tol, 5000, & Gradient, true, 5, debugOn, initial_weights);
 //            // normalize initial weights
 //            returnval[] /= l1norm(returnval);
 //            returnval = exponentiatedGradientDescent(expert_fe, returnval.dup, 2.0, tol, size_t.max, max_traj_length, & Gradient);
