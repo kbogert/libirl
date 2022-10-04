@@ -95,7 +95,7 @@ double [] exponentiatedGradientDescent(double [] expert_features, double [] init
     return weights;
 }
 
-double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100) {
+double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][] expert_features, double nu, double err, size_t max_iter, double [] delegate (double [], size_t) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100, void delegate (double) nu_out = null) {
 //    import std.stdio;
 
     double [] beta = new double[expert_features[0].length * 2];
@@ -210,6 +210,10 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
             break;
         } 
     }
+
+    if (nu_out != null) {
+        nu_out(nu);
+    }
         
     return w_prev;
 }
@@ -217,7 +221,7 @@ double [] unconstrainedAdaptiveExponentiatedStochasticGradientDescent(double [][
 
 
 
-double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100) {
+double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_features, double nu, double err, size_t max_iter, double [] delegate (double []) ff, bool usePathLengthBounds = true, size_t moving_average_length = 5, bool debugOn = false, double [] initial_params = null, double weight_limit = 100, void delegate (double) nu_out = null) {
     import std.stdio;
 
     double [] beta = new double[expert_features.length * 2];
@@ -339,6 +343,10 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             writeln(iterations, ": ", z_prev, " vs ", expert_features, " weights: ", w_prev);
 //               writeln(abs_diff_average(err_moving_averages));
             }   
+    if (nu_out != null) {
+        nu_out(nu);
+    }
+        
     return w_prev;
 }
 
