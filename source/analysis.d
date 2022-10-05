@@ -50,3 +50,29 @@ double learnedBehaviorAccuracy(Model model, Function!(Tuple!(Action), State) tru
     return correct_count / cast(double) model.S().size();
 
 }
+
+
+double calcStochasticInverseLearningError(Model model, Reward true_reward, Reward learned_reward, double tolerance, int max_iter = int.max) {
+    auto temp_rewards = model.R();
+
+    try {
+        
+        model.setR(true_reward.toFunction());
+        auto pi_star = model.getPolicy();
+    
+        model.setR(learned_reward.toFunction());
+        auto pi_L = model.getPolicy();
+
+        auto mu_pi_star = stateActionVisitationFrequency(model, pi_star, tolerance, max_iter);
+        auto mu_pi_L = stateActionVisitationFrequency(model, pi_L, tolerance, max_iter);
+
+        auto V_pi_star = sumout!(Action)(mu_pi_star * true_reward.toFunction());
+        auto V_pi_L = sumout!(Action)(mu_pi_L * true_reward.toFunction());
+        
+        return calcInverseLearningError(V_pi_star, V_pi_L);
+
+    } finally {
+        model.setR(temp_rewards);
+    }
+
+}
