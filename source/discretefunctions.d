@@ -1320,8 +1320,8 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
     Distribution!(PARAMS, OVER_2) opBinary(string op)(Distribution!(PARAMS) other) 
         if (PARAMS.length > 0 && (op=="*"))
     {
-        Distribution!(PARAMS, OVER_2) returnval = new Distribution!(PARAMS, OVER_2)(mySet.cartesian_product(over_param_set), 0.0);
-
+        double [Tuple!(PARAMS, OVER_2)] arr;
+        
         foreach (key1 ; mySet) {
 
             Distribution!(OVER_2)* p;
@@ -1332,14 +1332,17 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
                     auto fullkey = tuple(key1[], key2[]);
 
                     auto element = (*p)[key2];
-
-                    returnval[fullkey] = element * other[key1];
+                    auto o = other[key1];
+                    
+                    if (element != 0.0 && o != 0.0)
+                        arr[fullkey] = element * o;
                 
                 }
             }
         }
 
-        return returnval;
+        return new Distribution!(PARAMS, OVER_2)(mySet.cartesian_product(over_param_set), arr, 0.0);
+
     }
     
     // operation with the over params function (vector op)
