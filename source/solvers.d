@@ -225,6 +225,11 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
     import std.stdio;
 
     double [] beta = new double[expert_features.length * 2];
+    double [] z_prev = new double [beta.length / 2];
+    z_prev[] = 0;
+    double [] w_prev = new double [beta.length / 2];
+    w_prev[] = 0;
+
     if (! (initial_params is null)) {
 //        writeln(initial_params);
         beta[] = 0;
@@ -238,15 +243,13 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             }
         }
 //        writeln(beta);
+        z_prev = ff(initial_params);
+        z_prev[] -= expert_features[];
+
     } else {
         beta[0..(beta.length / 2)] = - log(beta.length / 2 );
         beta[beta.length/2 .. $] = - log(beta.length );   
     }
-
-    double [] z_prev = new double [beta.length / 2];
-    z_prev[] = 0;
-    double [] w_prev = new double [beta.length / 2];
-    w_prev[] = 0;
 
     size_t t = 0;
     size_t iterations = 0;
@@ -262,7 +265,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
         oscillation_check_data[i][] = 0;
     }
     
-    while (iterations < max_iter && (err_diff > err || iterations < moving_average_length)) {
+    while (iterations < max_iter && (err_diff > err || iterations < moving_average_length * 2)) {
 
         double [] m_t = z_prev.dup;
 
@@ -307,9 +310,9 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
  //       t %= expert_features.length;
         iterations ++;
 //        if (t == 0) {
-            nu /= 1.0005;
+            //nu /= 1.0001;
             err_moving_averages[moving_average_counter] = l1norm(z_t);
-            err_diff = stddev(err_moving_averages);           
+            err_diff = l1norm(err_moving_averages);           
 
             if (detect_oscillation(oscillation_check_data, moving_average_counter, actual_weights)) {
                 nu *= 0.9;
@@ -323,6 +326,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             moving_average_counter %= moving_average_length;
             if (debugOn) {
                 import std.stdio;
+                writeln(err_moving_averages);
                 writeln(beta, " GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
             }

@@ -82,7 +82,7 @@ public Function!(double, State) value_iteration(Model m, double tolerance, Funct
     tolerance = abs(tolerance);
     
     double diff = max( abs(v_prev ));
-    int iter = 0;
+    int iter = 1;
 
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter && isFinite(diff)) {
        
@@ -599,7 +599,7 @@ public Function!(double, State) soft_max_value_iteration(Model m, double toleran
     
     double diff = max( abs(v_prev ));
     
-    int iter = 0;
+    int iter = 1;
 
     while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter && isFinite(diff)) {
         
@@ -669,9 +669,9 @@ Function!(double, State) value_function_under_policy(Model m, Function!(Tuple!(A
     tolerance = abs(tolerance);
     
     double diff = max(abs( v_prev ));
-    int iter = 0;
+    int iter = 1;
     
-    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter) {
+    while (diff > tolerance*(1 - m.gamma()) / m.gamma() && iter < max_iter && isFinite(diff)) {
         v_next = (m.R() + m.gamma() * sumout!(State)( T * v_prev ) ).apply(policy) ;
 
         diff = max ( abs( v_next - v_prev )); 
@@ -810,9 +810,9 @@ Function!(double, State)[] stateVisitationFrequencyPerTimestep(Model m, Conditio
     tolerance = abs(tolerance);
     
     double diff = max( mu_prev );
-    int iter = 0;
+    int iter = 1;
 
-    while (diff > tolerance*((1 - gamma) / gamma) && iter < max_iter) {
+    while (diff > tolerance*((1 - gamma) / gamma) && iter < max_iter && isFinite(diff)) {
 
         Function!(double, State) mu_next = new Function!(double, State)(m.S(), 0.0);
         foreach (s; m.S()) {
