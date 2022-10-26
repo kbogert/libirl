@@ -9,6 +9,16 @@ double l1norm(double [] arr) {
     return reduce!((a,b) => a + abs(b))(0.0, arr);
 }
 
+double vect_sensitive_l1norm(double [] arr) {
+
+    double returnval = 0;
+
+    foreach (i, a ; arr) {
+        returnval += abs(a) * (i+1);
+    }
+            
+    return returnval;
+}
 double l2norm(double [] arr) {
 
     return sqrt(sumSquares(arr));

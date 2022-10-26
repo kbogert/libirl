@@ -248,7 +248,15 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
 
     } else {
         beta[0..(beta.length / 2)] = - log(beta.length / 2 );
-        beta[beta.length/2 .. $] = - log(beta.length );   
+        beta[beta.length/2 .. $] = - log(beta.length );
+        
+        double [] weights = new double[beta.length];
+        foreach (i ; 0 .. (beta.length / 2)) {
+            weights[i] = exp(beta[i]);
+            weights[i + (beta.length / 2)] = exp(beta[i + (beta.length / 2)]);
+        }
+        z_prev = ff(weights);
+        z_prev[] -= expert_features[];
     }
 
     size_t t = 0;
@@ -311,8 +319,9 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
         iterations ++;
 //        if (t == 0) {
             //nu /= 1.0001;
-            err_moving_averages[moving_average_counter] = l1norm(z_t);
-            err_diff = l1norm(err_moving_averages);           
+            nu += 0.00001;
+            err_moving_averages[moving_average_counter] = vect_sensitive_l1norm(z_t);
+            err_diff = stddev(err_moving_averages);           
 
             if (detect_oscillation(oscillation_check_data, moving_average_counter, actual_weights)) {
                 nu *= 0.9;
