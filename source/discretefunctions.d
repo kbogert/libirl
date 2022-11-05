@@ -1223,7 +1223,7 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
 {
 
     // need this to create distributions, for instance when accessing a param set that hasn't already been inserted
-    Set!(OVER_2) over_param_set;
+    Set!(OVER_2) myOverSet;
     
     public this (Distribution!OVER_2 [Tuple!(PARAMS)] init, Set!(PARAMS) param_set) {
 
@@ -1231,14 +1231,14 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
             throw new Exception("Initial distribution cannot be empty");
         }
         auto key = init.keys()[0];
-        over_param_set = init[key].param_set();
+        myOverSet = init[key].param_set();
         
         super(param_set, init);
     }
 
     public this (Set!(OVER_2) over_params, Set!(PARAMS) param_set) 
     {
-        over_param_set = over_params;
+        myOverSet = over_params;
         super(param_set, new Distribution!(OVER_2)(over_params));
     }
 
@@ -1253,11 +1253,15 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
         
     }
 
+    public Set!(OVER_2) over_param_set() {
+        return myOverSet;
+    }
+
 
     // converts this structured function into a flat one that doesn't have any distribution features
     public Function!(double, PARAMS, OVER_2) flatten() {
 
-        auto combined_params = param_set.cartesian_product(over_param_set);
+        auto combined_params = param_set.cartesian_product(myOverSet);
 
 
         double [Tuple!(PARAMS, OVER_2)] tempArray;
@@ -1266,7 +1270,7 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
             Distribution!(OVER_2)* p;
             p = (key1 in storage);
             if (p ! is null) {
-                foreach(key2; over_param_set) {
+                foreach(key2; myOverSet) {
                     auto fullKey = tuple(key1[], key2[]);
 
 //                    tempArray[fullKey] = 0.0;
@@ -1327,7 +1331,7 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
             Distribution!(OVER_2)* p;
             p = (key1 in storage);
             if (p ! is null) {
-                foreach (key2; over_param_set) {
+                foreach (key2; myOverSet) {
 
                     auto fullkey = tuple(key1[], key2[]);
 
@@ -1341,7 +1345,7 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
             }
         }
 
-        return new Distribution!(PARAMS, OVER_2)(mySet.cartesian_product(over_param_set), arr, 0.0);
+        return new Distribution!(PARAMS, OVER_2)(mySet.cartesian_product(myOverSet), arr, 0.0);
 
     }
     
@@ -1356,12 +1360,12 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
     Function!(RETURN_TYPE, PARAMS, OVER_2) opBinary(string op)(double scalar) 
         if ((op=="+"||op=="-"||op=="*"||op=="/"))
     {
-        auto combined_params = param_set.cartesian_product(over_param_set);
+        auto combined_params = param_set.cartesian_product(myOverSet);
 
         Function!(double, PARAMS, OVER_2) returnval = new Function!(double, PARAMS, OVER_2)(combined_params);
 
         foreach(key; param_set) {
-            foreach(key2; over_param_set) {
+            foreach(key2; myOverSet) {
                 auto fullKey = tuple(key1[], key2[]);
 
                 mixin("returnval[fullkey] = storage.get(key1, new Distribution!(OVER_2)(over_params))[key2] " ~ op ~ " scalar;");
@@ -1387,7 +1391,7 @@ class ConditionalDistribution : Function!(Distribution!(OVER_2), PARAMS)
         if ( mySet !is null && ! mySet.contains(i)) {
             throw new Exception("ERROR, key is not in the set this function is defined over.");
         }
-        storage[i] = new Distribution!(OVER_2)(over_param_set);
+        storage[i] = new Distribution!(OVER_2)(myOverSet);
         return storage[i];
     }
 
