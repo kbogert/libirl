@@ -46,7 +46,8 @@ class Set(T ...) {
     
     public int opApply(int delegate(ref Tuple!(T)) dg) {
           int result = 0;
-          foreach (value ; storage) {
+          import std.random;
+          foreach (value ; storage.randomShuffle()) {
                result = dg(value);
                if (result) break;
 
