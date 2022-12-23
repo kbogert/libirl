@@ -625,6 +625,31 @@ class Function (RETURN_TYPE, PARAM ...) {
 
             return max_param;
         }
+        Tuple!(PARAM) argmax_shuffled() {
+            RETURN_TYPE max;
+            Tuple!(PARAM) max_param;
+            bool setMax = false;
+            import std.random;
+
+            foreach (key ; mySet.toArray.randomShuffle()) {
+
+                RETURN_TYPE val = storage.get(key, funct_default);
+            
+                if (! setMax ) {
+                    max = val;
+                    max_param = key;
+                    setMax = true;
+                } else {
+                    if (val > max) {
+                        max = val;
+                        max_param = key;
+                    }
+                }                
+            
+            }
+
+            return max_param;
+        }
 
         RETURN_TYPE sumout()() 
             if (isNumeric!(RETURN_TYPE))
@@ -1014,6 +1039,16 @@ public auto argmax(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 public auto argmax(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
 
     return f.argmax!(OVER)();
+}
+
+public auto argmax_shuffled(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.argmax_shuffled();
+}
+
+public auto argmax_shuffled(OVER, RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
+
+    return f.argmax_shuffled!(OVER)();
 }
 
 public auto abs(RETURN_TYPE, PARAM...) (Function!(RETURN_TYPE, PARAM) f) {
