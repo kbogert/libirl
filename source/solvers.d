@@ -324,7 +324,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             err_diff = stddev(err_moving_averages);           
 
             if (detect_oscillation(oscillation_check_data, moving_average_counter, actual_weights)) {
-                nu *= 0.9;
+                nu *= 0.99;
                 if (debugOn)
                     writeln("correct nu down");
             } /*else if ((old_err_diff - err_diff) / err_diff > 0.4) {
@@ -335,7 +335,7 @@ double [] unconstrainedAdaptiveExponentiatedGradientDescent(double [] expert_fea
             moving_average_counter %= moving_average_length;
             if (debugOn) {
                 import std.stdio;
-                writeln(err_moving_averages);
+//                writeln(err_moving_averages);
                 writeln(beta, " GD std dev ", err_diff, " vs ", err, ", iterations: ", iterations, " of ", max_iter);
 //               writeln(abs_diff_average(err_moving_averages));
             }
