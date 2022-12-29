@@ -1231,6 +1231,18 @@ class Distribution(PARAMS...) : Function!(double, PARAMS) {
         return entropy() + KLD(other_dist);
     }
 
+    double JSD(Distribution!PARAMS other_dist) {
+
+        // find the middle "distribution"
+        Distribution!PARAMS M = new Distribution!PARAMS(mySet, 0.0);
+        foreach(i; mySet) {
+            M[i] = 0.5*(storage.get(i, funct_default) + other_dist[i]);
+        }
+
+        return 0.5*KLD(M) + 0.5*(other_dist.KLD(M));
+
+    }
+
     void optimize() {
         foreach(key, val ; storage) {
             if (val == funct_default) {
